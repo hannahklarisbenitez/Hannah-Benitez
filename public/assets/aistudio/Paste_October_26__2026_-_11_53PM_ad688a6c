@@ -1,0 +1,1708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuickPrint Hub - Printing Shop Queue & Order Management System</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        // User-specified 4-color palette:
+                        theme: {
+                            light: '#F5F5F5',
+                            teal: '#76ABAE',
+                            charcoal: '#303841',
+                            orange: '#FF5722',
+                        },
+                        primary: {
+                            DEFAULT: '#FF5722',
+                            dark: '#E64A19',
+                            light: '#FBE9E7',
+                        },
+                        secondary: {
+                            DEFAULT: '#76ABAE',
+                            dark: '#5A8D90',
+                            light: '#EAF3F3',
+                        },
+                        dark: {
+                            DEFAULT: '#303841',
+                            surface: '#242B33',
+                            light: '#3A4750',
+                        },
+                        light: {
+                            DEFAULT: '#F5F5F5',
+                            paper: '#FFFFFF',
+                        },
+                        // Remap utility color classes to the 4-color palette
+                        blue: {
+                            50: '#FBE9E7',
+                            100: '#FFCCBC',
+                            200: '#FFAB91',
+                            300: '#76ABAE',
+                            400: '#76ABAE',
+                            500: '#5B8C8F',
+                            600: '#FF5722',
+                            700: '#E64A19',
+                            800: '#303841',
+                            900: '#222831',
+                        },
+                        slate: {
+                            50: '#F5F5F5',
+                            100: '#ECECEC',
+                            200: '#DFE5E7',
+                            300: '#B8C4C6',
+                            400: '#8A999B',
+                            500: '#607274',
+                            600: '#4A5560',
+                            700: '#3A4750',
+                            800: '#303841',
+                            900: '#222831',
+                            950: '#181C21',
+                        },
+                        teal: {
+                            DEFAULT: '#76ABAE',
+                            50: '#F1F7F7',
+                            100: '#E2F0F0',
+                            200: '#C5E1E2',
+                            300: '#A3D0D2',
+                            400: '#84BFC1',
+                            500: '#76ABAE',
+                            600: '#5B8C8F',
+                            700: '#466C6E',
+                            800: '#334D4E',
+                            900: '#203031',
+                        },
+                        orange: {
+                            DEFAULT: '#FF5722',
+                            50: '#FBE9E7',
+                            100: '#FFCCBC',
+                            200: '#FFAB91',
+                            300: '#FF8A65',
+                            400: '#FF7043',
+                            500: '#FF5722',
+                            600: '#F4511E',
+                            700: '#E64A19',
+                            800: '#D84315',
+                            900: '#BF360C',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-[#F5F5F5] text-[#303841] min-h-screen flex flex-col antialiased">
+
+    <!-- ==============================================================
+         GLOBAL TOP NAVIGATION BAR
+         ============================================================== -->
+    <header class="sticky top-0 z-40 bg-white text-[#303841] border-b border-slate-200 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="min-h-16 flex flex-wrap items-center justify-between gap-x-5 gap-y-2 py-2">
+                <!-- Brand Logo -->
+                <div class="flex items-center gap-3 cursor-pointer shrink-0" onclick="NavigationController.switchPortal('customer')">
+                    <div class="w-10 h-10 rounded-xl bg-[#FF5722] flex items-center justify-center text-white shadow-sm">
+                        <i data-lucide="printer" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <span class="font-extrabold text-lg text-[#303841] tracking-tight">QuickPrint<span class="text-[#FF5722]">Hub</span></span>
+                        <p class="text-[11px] text-slate-500 hidden sm:block">Prints made easy</p>
+                    </div>
+                </div>
+
+                <label class="hidden md:flex flex-1 max-w-sm items-center gap-2 px-4 py-2 rounded-md border border-slate-300 bg-white text-slate-400 focus-within:border-[#76ABAE]">
+                    <input type="search" placeholder="Search printing services" class="w-full text-sm text-slate-700 outline-none placeholder:text-slate-400" aria-label="Search products and services">
+                    <i data-lucide="search" class="w-4 h-4"></i>
+                </label>
+
+                <!-- Portal Switcher Navigation -->
+                <nav class="flex items-center gap-1">
+                    <button type="button" data-portal-btn="customer" onclick="NavigationController.switchPortal('customer')" class="px-2.5 py-1.5 text-xs font-bold rounded-lg bg-[#FF5722] text-white shadow-sm flex items-center gap-1.5 transition-all">
+                        <i data-lucide="globe" class="w-4 h-4"></i><span>Shop</span>
+                    </button>
+                    <button type="button" data-portal-btn="staff" onclick="NavigationController.switchPortal('staff')" class="px-2.5 py-1.5 text-xs font-semibold rounded-lg text-slate-600 hover:bg-slate-100 flex items-center gap-1.5 transition-all">
+                        <i data-lucide="user-check" class="w-4 h-4"></i><span class="hidden lg:inline">Staff</span>
+                    </button>
+                    <button type="button" data-portal-btn="admin" onclick="NavigationController.switchPortal('admin')" class="px-2.5 py-1.5 text-xs font-semibold rounded-lg text-slate-600 hover:bg-slate-100 flex items-center gap-1.5 transition-all">
+                        <i data-lucide="shield" class="w-4 h-4"></i><span class="hidden lg:inline">Admin</span>
+                    </button>
+                    <button type="button" data-open-case-study class="px-2 py-1.5 text-xs font-semibold rounded-lg text-[#5B8C8F] bg-[#76ABAE]/10 hover:bg-[#76ABAE]/20 flex items-center gap-1" title="Academic Case Study Documentation">
+                        <i data-lucide="book-open" class="w-3.5 h-3.5"></i><span class="hidden xl:inline">Case Study</span>
+                    </button>
+                </nav>
+
+                <div id="auth-status-container" class="flex items-center gap-2">
+                    <!-- Dynamically populated -->
+                </div>
+            </div>
+            <nav class="hidden sm:flex items-center gap-8 border-t border-slate-100 py-3 text-sm text-slate-700" aria-label="Printing services">
+                <a href="#personalized-catalog-section" onclick="filterOverviewProducts('all')" class="font-bold hover:text-[#FF5722]">All services</a>
+                <a href="#personalized-catalog-section" onclick="filterOverviewProducts('documents')" class="hover:text-[#FF5722]">Documents &amp; thesis</a>
+                <a href="#personalized-catalog-section" onclick="filterOverviewProducts('photo')" class="hover:text-[#FF5722]">Photo printing</a>
+                <a href="#personalized-catalog-section" onclick="filterOverviewProducts('posters')" class="hover:text-[#FF5722]">Poster printing</a>
+                <a href="#personalized-catalog-section" onclick="filterOverviewProducts('custom')" class="hover:text-[#FF5722]">Invitations &amp; custom printing</a>
+                <a href="#order-placement-section" class="hover:text-[#FF5722]">Place an order</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- ==============================================================
+         VIEW 1: CUSTOMER PORTAL
+         ============================================================== -->
+    <main id="portal-customer" class="flex-grow pb-16">
+        <!-- Hero Section -->
+        <section class="bg-[#F6EBDD] overflow-hidden">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 min-h-[430px] grid lg:grid-cols-2 items-center gap-4 lg:gap-8 py-12 lg:py-8">
+                <div class="max-w-xl relative z-10">
+                    <span class="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[.16em] text-[#D94318] mb-4">
+                        <i data-lucide="sparkles" class="w-4 h-4"></i> Your one-stop print shop
+                    </span>
+                    <h1 class="text-4xl sm:text-5xl lg:text-[3.25rem] font-semibold text-[#20252B] tracking-tight leading-[1.08]">
+                        We take care of all your <span class="text-[#E9471B]">printing needs.</span>
+                    </h1>
+                    <p class="mt-5 text-base sm:text-lg text-slate-700 leading-relaxed max-w-lg">
+                        Submit document, photo, poster, invitation, and custom-printing orders online, then track each order from pending to ready for pickup.
+                    </p>
+                    <div class="mt-7 flex flex-wrap gap-3">
+                        <a href="#personalized-catalog-section" class="px-5 py-3 bg-[#F04418] hover:bg-[#D93A14] text-white font-semibold text-sm tracking-wide shadow-sm transition-colors">All services</a>
+                        <a href="#order-placement-section" class="px-5 py-3 bg-slate-400 hover:bg-slate-500 text-white font-semibold text-sm tracking-wide transition-colors">Place an order</a>
+                    </div>
+                    <div class="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-semibold text-slate-600">
+                        <a href="#order-tracking-section" class="hover:text-[#E9471B]">Track an order →</a>
+                    </div>
+                </div>
+                <figure class="w-full max-w-2xl justify-self-center lg:justify-self-end -mr-2 sm:-mr-8" aria-label="Examples of QuickPrint Hub document, photo, poster and custom printing">
+                    <svg viewBox="0 0 640 430" role="img" aria-labelledby="hero-printing-title" class="w-full h-auto">
+                        <title id="hero-printing-title">Examples of document, photo, poster and custom printing</title>
+                        <defs>
+                            <filter id="product-shadow" x="-30%" y="-30%" width="160%" height="180%"><feDropShadow dx="0" dy="12" stdDeviation="10" flood-color="#55483D" flood-opacity=".2" /></filter>
+                            <linearGradient id="poster-sunset" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#FFB21B"/><stop offset="1" stop-color="#F04A1D"/></linearGradient>
+                            <linearGradient id="poster-blue" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#77D4D0"/><stop offset="1" stop-color="#246C89"/></linearGradient>
+                        </defs>
+                        <circle cx="490" cy="208" r="154" fill="#E8D6C1" opacity=".7"/>
+                        <g filter="url(#product-shadow)" transform="rotate(-8 197 214)">
+                            <rect x="73" y="92" width="168" height="245" rx="3" fill="#FFFDF8"/>
+                            <rect x="83" y="102" width="148" height="225" fill="url(#poster-sunset)"/>
+                            <circle cx="156" cy="166" r="43" fill="#FBE4A6" opacity=".9"/>
+                            <path d="M88 237 Q148 174 226 235V320H88Z" fill="#172F43"/>
+                            <path d="M104 259h105" stroke="#fff" stroke-width="4" opacity=".8"/>
+                            <text x="157" y="217" text-anchor="middle" fill="#fff" font-family="Arial,sans-serif" font-size="17" font-weight="700">MAKE IT</text>
+                            <text x="157" y="239" text-anchor="middle" fill="#fff" font-family="Arial,sans-serif" font-size="20" font-weight="900">BRIGHT</text>
+                            <text x="157" y="303" text-anchor="middle" fill="#fff" font-family="Arial,sans-serif" font-size="9" letter-spacing="2">POSTER PRINT</text>
+                        </g>
+                        <g filter="url(#product-shadow)" transform="rotate(7 425 140)">
+                            <rect x="344" y="42" width="175" height="213" rx="4" fill="#fff"/>
+                            <rect x="354" y="52" width="155" height="193" fill="url(#poster-blue)"/>
+                            <path d="M354 188 Q407 120 455 184T509 167V245H354Z" fill="#F9D343"/>
+                            <path d="M354 208 Q408 146 459 208T509 191V245H354Z" fill="#EC5A46"/>
+                            <text x="431" y="102" text-anchor="middle" fill="#fff" font-family="Arial,sans-serif" font-size="12" font-weight="700" letter-spacing="2">GOOD IDEAS</text>
+                            <text x="431" y="127" text-anchor="middle" fill="#fff" font-family="Arial,sans-serif" font-size="22" font-weight="900">GET SEEN</text>
+                            <circle cx="431" cy="157" r="13" fill="#FBE9E7"/>
+                        </g>
+                        <g filter="url(#product-shadow)" transform="rotate(9 529 307)">
+                            <rect x="472" y="244" width="127" height="132" rx="7" fill="#fff"/>
+                            <rect x="482" y="254" width="107" height="112" rx="3" fill="#EC4C91"/>
+                            <path d="M482 340l37-50 24 30 18-19 28 31v34H482Z" fill="#FFCE44"/>
+                            <text x="535" y="278" text-anchor="middle" fill="#fff" font-family="Arial,sans-serif" font-size="10" font-weight="700">CUSTOM</text>
+                            <text x="535" y="293" text-anchor="middle" fill="#fff" font-family="Arial,sans-serif" font-size="13" font-weight="900">INVITES</text>
+                        </g>
+                        <g filter="url(#product-shadow)" transform="rotate(-5 321 338)">
+                            <rect x="244" y="276" width="150" height="91" rx="5" fill="#fff"/>
+                            <rect x="255" y="287" width="128" height="69" rx="3" fill="#303841"/>
+                            <circle cx="278" cy="309" r="8" fill="#FF5722"/><circle cx="299" cy="309" r="8" fill="#76ABAE"/>
+                            <path d="M271 329h94" stroke="#fff" stroke-width="4" opacity=".85"/>
+                            <path d="M271 340h61" stroke="#C5E1E2" stroke-width="3"/>
+                            <text x="321" y="302" text-anchor="middle" fill="#fff" font-family="Arial,sans-serif" font-size="9" font-weight="700" letter-spacing="1">DOCUMENT PRINTS</text>
+                        </g>
+                        <g fill="#F04418"><circle cx="288" cy="81" r="5"/><circle cx="567" cy="111" r="7"/><circle cx="414" cy="355" r="5"/></g>
+                        <g fill="#76ABAE"><circle cx="89" cy="78" r="7"/><circle cx="432" cy="25" r="5"/></g>
+                    </svg>
+                </figure>
+            </div>
+        </section>
+
+        <!-- TRACK MY ORDER SECTION -->
+        <section id="order-tracking-section" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10">
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-6 border-b border-slate-100">
+                    <div>
+                        <h2 class="text-xl sm:text-2xl font-black text-slate-900 flex items-center gap-2">
+                            <i data-lucide="search" class="w-6 h-6 text-blue-600"></i>
+                            <span>Live Order & Queue Tracker</span>
+                        </h2>
+                        <p class="text-sm text-slate-500 mt-1">Enter your Queue Number (e.g. Q-101) or Tracking Code (e.g. QP-2026-101) to monitor printing progress.</p>
+                    </div>
+                    <!-- Sample quick chips -->
+                    <div class="flex items-center gap-1.5 flex-wrap text-xs">
+                        <span class="text-slate-400 font-medium">Try demos:</span>
+                        <button type="button" onclick="CustomerController.trackOrder('Q-101')" class="px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono font-bold hover:bg-emerald-100">Q-101 (Ready)</button>
+                        <button type="button" onclick="CustomerController.trackOrder('Q-102')" class="px-2.5 py-1 rounded-md bg-blue-50 text-blue-700 border border-blue-200 font-mono font-bold hover:bg-blue-100">Q-102 (Printing)</button>
+                        <button type="button" onclick="CustomerController.trackOrder('Q-103')" class="px-2.5 py-1 rounded-md bg-amber-50 text-amber-700 border border-amber-200 font-mono font-bold hover:bg-amber-100">Q-103 (Pending)</button>
+                    </div>
+                </div>
+
+                <!-- Tracker Search Form -->
+                <form id="tracker-search-form" class="flex flex-col sm:flex-row gap-3 max-w-2xl">
+                    <div class="relative flex-1">
+                        <i data-lucide="search" class="w-5 h-5 text-slate-400 absolute left-3.5 top-3"></i>
+                        <input type="text" id="tracker-input-code" placeholder="Enter Queue Number (e.g. Q-101) or Tracking ID..." class="w-full pl-11 pr-4 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono uppercase" required>
+                    </div>
+                    <button type="submit" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl shadow-sm transition-all flex items-center justify-center gap-2">
+                        <span>Check Status</span>
+                    </button>
+                </form>
+
+                <!-- Tracker Not Found Alert -->
+                <div id="tracker-not-found" class="hidden mt-6 p-4 rounded-xl bg-red-50 border border-red-200 text-red-800 text-sm flex items-center gap-3">
+                    <i data-lucide="alert-circle" class="w-5 h-5 text-red-600 flex-shrink-0"></i>
+                    <div>
+                        <span class="font-bold">Order not found:</span> No active or past orders match "<span id="tracker-not-found-query" class="font-mono"></span>". Please double-check your claim ticket.
+                    </div>
+                </div>
+
+                <!-- Tracker Results Display Card -->
+                <div id="tracker-results-card" class="hidden mt-8 p-6 bg-slate-50 rounded-2xl border border-slate-200">
+                    <div id="tracker-active-code" data-code=""></div>
+                    
+                    <!-- Top Status Banner -->
+                    <div id="track-disp-position-banner" class="mb-6">
+                        <!-- Populated dynamically -->
+                    </div>
+
+                    <!-- 4-Step Stepper -->
+                    <div class="mb-8 px-2 sm:px-6">
+                        <div class="flex items-center justify-between relative">
+                            <!-- Step 1: Pending -->
+                            <div class="flex flex-col items-center z-10">
+                                <div id="step-circle-pending" class="w-8 h-8 rounded-full bg-blue-600 text-white font-bold text-sm flex items-center justify-center">1</div>
+                                <span id="step-label-pending" class="text-xs font-bold text-blue-700 mt-2">Pending</span>
+                            </div>
+                            <div id="step-line-pending" class="h-1 bg-blue-600 flex-1 mx-2"></div>
+
+                            <!-- Step 2: Processing -->
+                            <div class="flex flex-col items-center z-10">
+                                <div id="step-circle-processing" class="w-8 h-8 rounded-full bg-slate-200 text-slate-500 font-semibold text-sm flex items-center justify-center">2</div>
+                                <span id="step-label-processing" class="text-xs text-slate-400 mt-2">Processing</span>
+                            </div>
+                            <div id="step-line-processing" class="h-1 bg-slate-200 flex-1 mx-2"></div>
+
+                            <!-- Step 3: Ready -->
+                            <div class="flex flex-col items-center z-10">
+                                <div id="step-circle-ready" class="w-8 h-8 rounded-full bg-slate-200 text-slate-500 font-semibold text-sm flex items-center justify-center">3</div>
+                                <span id="step-label-ready" class="text-xs text-slate-400 mt-2">Ready for Pickup</span>
+                            </div>
+                            <div id="step-line-ready" class="h-1 bg-slate-200 flex-1 mx-2"></div>
+
+                            <!-- Step 4: Completed -->
+                            <div class="flex flex-col items-center z-10">
+                                <div id="step-circle-completed" class="w-8 h-8 rounded-full bg-slate-200 text-slate-500 font-semibold text-sm flex items-center justify-center">4</div>
+                                <span id="step-label-completed" class="text-xs text-slate-400 mt-2">Completed</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Order Details Grid -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-xs sm:text-sm bg-white p-5 rounded-xl border border-slate-200">
+                        <div>
+                            <span class="text-slate-400 block text-[11px]">QUEUE NUMBER</span>
+                            <span id="track-disp-queue" class="text-2xl font-black font-mono text-blue-700">Q-101</span>
+                            <span id="track-disp-tracking" class="text-slate-500 block text-[11px] font-mono mt-0.5">QP-2026-101</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-400 block text-[11px]">CUSTOMER NAME</span>
+                            <span id="track-disp-name" class="font-bold text-slate-800 text-base">Juan Dela Cruz</span>
+                            <span id="track-disp-service" class="text-slate-600 block text-xs mt-0.5">Document Printing</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-400 block text-[11px]">PRINTING SPECIFICATIONS</span>
+                            <span id="track-disp-station" class="font-semibold text-slate-800">Document printing</span>
+                            <span id="track-disp-specs" class="text-slate-500 block text-xs mt-0.5">30 pages • A4 size</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-400 block text-[11px]">PAYMENT & BALANCE</span>
+                            <div class="flex items-center gap-2">
+                                <span id="track-disp-total" class="font-bold text-slate-900 text-base">₱60.00</span>
+                                <span id="track-disp-pay-status" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">PAID</span>
+                            </div>
+                            <span class="text-slate-500 block text-xs mt-0.5">Remaining Balance: <b id="track-disp-balance" class="text-red-600 font-mono">₱0.00</b></span>
+                        </div>
+                    </div>
+
+                    <!-- Action footer -->
+                    <div class="mt-4 flex items-center justify-between pt-3 border-t border-slate-200 text-xs">
+                        <span class="text-slate-500">Pick-up Location: <b>Ground Floor, Student Plaza Commercial Complex</b></span>
+                        <button type="button" id="track-print-slip-btn" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-lg shadow-sm flex items-center gap-1.5">
+                            <i data-lucide="printer" class="w-3.5 h-3.5"></i> Print Claim Slip
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ORDER PLACEMENT & PRICE ESTIMATOR SECTION -->
+        <section id="order-placement-section" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                
+                <!-- Left 7 Cols: Order Submission Form -->
+                <div class="lg:col-span-7 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
+                    <div class="mb-6">
+                        <h2 class="text-xl sm:text-2xl font-black text-slate-900 flex items-center gap-2">
+                            <i data-lucide="file-plus" class="w-6 h-6 text-blue-600"></i>
+                            <span>Online Printing Order Submission</span>
+                        </h2>
+                        <p class="text-sm text-slate-500 mt-1">Configure your printing specifications below. You will be issued a Queue Claim Number immediately.</p>
+                    </div>
+
+                    <form id="customer-order-form" class="space-y-5">
+                        <!-- Customer Info Row -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Your Full Name *</label>
+                                <input type="text" id="cust-name" placeholder="e.g. Maria Santos" class="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:outline-none" required>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Mobile Contact No. *</label>
+                                <input type="text" id="cust-contact" placeholder="e.g. 0917-123-4567" class="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:outline-none" required>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Email (Optional)</label>
+                            <input type="email" id="cust-email" placeholder="For order updates" class="w-full px-3.5 py-2 text-sm rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        </div>
+
+                        <!-- Service Selection -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Select Printing Service *</label>
+                            <select id="cust-service-select" class="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white font-medium text-slate-800" required>
+                                <!-- Populated dynamically -->
+                            </select>
+                        </div>
+
+                        <!-- Specifications Grid -->
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Paper Size</label>
+                                <select id="cust-paper-size" class="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 bg-white">
+                                    <option value="short">Short / Letter (8.5 x 11")</option>
+                                    <option value="a4" selected>A4 (8.27 x 11.69") [+₱0.50]</option>
+                                    <option value="long">Long / Legal (8.5 x 13") [+₱1.00]</option>
+                                    <option value="a3">A3 Tabloid (11.7 x 16.5") [+₱10.00]</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Paper Material</label>
+                                <select id="cust-paper-type" class="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 bg-white">
+                                    <option value="regular70" selected>Standard 70gsm Copier</option>
+                                    <option value="book80">Premium 80gsm Book Paper [+₱1.00]</option>
+                                    <option value="glossyPhoto">Glossy Photo 230gsm [+₱12.00]</option>
+                                    <option value="matteCardstock">Matte Cardstock 250gsm [+₱10.00]</option>
+                                    <option value="stickerVinyl">Vinyl Sticker Sheet [+₱15.00]</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Print Layout</label>
+                                <select id="cust-print-side" class="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 bg-white">
+                                    <option value="single" selected>Single-sided (1 Page/Sheet)</option>
+                                    <option value="double">Double-sided (Back-to-Back)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Number of Pages</label>
+                                <input type="number" id="cust-page-count" value="10" min="1" max="1000" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 font-mono" required>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Copies / Sets</label>
+                                <input type="number" id="cust-copies-count" value="1" min="1" max="100" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 font-mono" required>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Binding / Finishing</label>
+                                <select id="cust-binding" class="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 bg-white">
+                                    <option value="none" selected>No Binding</option>
+                                    <option value="staple">Corner Staple (Free)</option>
+                                    <option value="ring">Ring / Spiral Bind (+₱55.00)</option>
+                                    <option value="soft">Soft Bind with PVC (+₱75.00)</option>
+                                    <option value="hard">Hardbound Gold Foil (+₱350.00)</option>
+                                    <option value="laminate">Laminate Each Sheet (+₱25.00)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Special Instructions -->
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Special Printing Instructions</label>
+                            <textarea id="cust-special-instructions" rows="2" placeholder="e.g. Please print page 1 in colored cover, stapled on top-left corner..." class="w-full px-3.5 py-2 text-xs rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
+                        </div>
+
+                        <button type="submit" class="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-black text-sm rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2">
+                            <i data-lucide="send" class="w-4 h-4"></i> Submit Order & Generate Queue Ticket
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Right 5 Cols: Live Price Breakdown & Summary -->
+                <div class="lg:col-span-5">
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-7 sticky top-24">
+                        <div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
+                            <h3 class="font-black text-lg text-slate-900 flex items-center gap-2">
+                                <i data-lucide="receipt" class="w-5 h-5 text-emerald-600"></i>
+                                <span>Instant Cost Calculator</span>
+                            </h3>
+                            <span class="text-[11px] font-bold px-2 py-0.5 bg-slate-100 text-slate-600 rounded">Live Rate</span>
+                        </div>
+
+                        <!-- Itemized Breakdown -->
+                        <div id="calc-detailed-breakdown" class="space-y-1.5 py-2 mb-4">
+                            <!-- Populated dynamically -->
+                        </div>
+
+                        <!-- Totals Section -->
+                        <div class="pt-4 border-t border-slate-200 space-y-2">
+                            <div class="flex justify-between text-sm text-slate-600">
+                                <span>Subtotal:</span>
+                                <span id="calc-summary-subtotal" class="font-mono font-bold text-slate-800">₱0.00</span>
+                            </div>
+                            <div class="flex justify-between items-baseline pt-3 border-t border-slate-200">
+                                <span class="font-black text-base text-slate-900">Total Amount:</span>
+                                <span id="calc-summary-total" class="font-black text-3xl font-mono text-blue-700">₱0.00</span>
+                            </div>
+                        </div>
+
+                        <!-- Policy notice -->
+                        <div class="mt-6 p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-500 space-y-1.5">
+                            <div class="font-bold text-slate-700 flex items-center gap-1.5">
+                                <i data-lucide="shield-alert" class="w-4 h-4 text-amber-500"></i> Payment & Claiming Policy
+                            </div>
+                            <p>• Payments are settled at the cashier counter upon order arrival or pickup.</p>
+                            <p>• Present your assigned <b>Queue Number</b> or Claim Slip at Counter 1 to claim printed copies.</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- PRODUCT OVERVIEW -->
+        <section id="personalized-catalog-section" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-8">
+            <div class="max-w-7xl mx-auto">
+                <h2 class="text-2xl sm:text-3xl font-medium tracking-tight text-slate-900">Printing Services</h2>
+                <div class="mt-7 mb-7 max-w-sm">
+                    <label for="catalog-category-select" class="sr-only">Filter products by category</label>
+                    <select id="catalog-category-select" onchange="filterOverviewProducts(this.value)" class="w-full appearance-none rounded border border-slate-200 bg-slate-100 px-3 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#76ABAE]">
+                        <option value="all">All printing services</option>
+                        <option value="documents">Documents &amp; thesis</option>
+                        <option value="photo">Photo printing</option>
+                        <option value="posters">Poster printing</option>
+                        <option value="custom">Invitations &amp; custom printing</option>
+                    </select>
+                </div>
+
+                <div id="customer-services-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-7">
+                    <a href="#order-placement-section" data-product-category="unsupported" class="overview-product-card group rounded-lg border border-slate-300 bg-white p-3.5 transition-shadow hover:shadow-md">
+                        <div class="flex h-52 items-center justify-center overflow-hidden bg-slate-50">
+                            <svg viewBox="0 0 300 210" role="img" aria-label="Framed photo tile illustration" class="h-full w-full">
+                                <rect x="64" y="17" width="172" height="176" rx="3" fill="#303841"/><rect x="74" y="27" width="152" height="156" fill="#f8f6ef"/><rect x="83" y="36" width="134" height="138" fill="#d8edf0"/><circle cx="177" cy="78" r="25" fill="#f4c96b"/><path d="M83 134 122 87l25 30 26-36 44 54v39H83Z" fill="#76ABAE"/><path d="m83 150 43-37 29 28 24-22 38 31v24H83Z" fill="#466c6e"/><rect x="51" y="193" width="198" height="5" rx="2" fill="#9ca3af"/>
+                            </svg>
+                        </div>
+                        <h3 class="mt-3 text-center text-sm font-medium text-slate-800">Photo Tiles</h3>
+                    </a>
+                    <a href="#order-placement-section" data-product-category="unsupported" class="overview-product-card group rounded-lg border border-slate-300 bg-white p-3.5 transition-shadow hover:shadow-md">
+                        <div class="flex h-52 items-center justify-center overflow-hidden bg-slate-50">
+                            <svg viewBox="0 0 300 210" role="img" aria-label="Photo frame illustration" class="h-full w-full">
+                                <rect x="48" y="25" width="204" height="160" rx="3" fill="#303841"/><rect x="59" y="36" width="182" height="138" fill="#fff"/><rect x="70" y="47" width="160" height="116" fill="#d7ebee"/><circle cx="181" cy="79" r="21" fill="#f2c965"/><path d="M70 135 115 83l31 34 26-25 58 53v18H70Z" fill="#76ABAE"/><path d="m70 147 44-31 28 21 32-29 56 41v14H70Z" fill="#466c6e"/><rect x="123" y="185" width="54" height="7" rx="3" fill="#9ca3af"/>
+                            </svg>
+                        </div>
+                        <h3 class="mt-3 text-center text-sm font-medium text-slate-800">Photo Frames</h3>
+                    </a>
+                    <a href="#order-placement-section" data-product-category="posters" class="overview-product-card group rounded-lg border border-slate-300 bg-white p-3.5 transition-shadow hover:shadow-md">
+                        <div class="flex h-52 items-center justify-center overflow-hidden bg-slate-50">
+                            <svg viewBox="0 0 300 210" role="img" aria-label="Colorful photo poster illustration" class="h-full w-full">
+                                <rect x="91" y="13" width="118" height="184" rx="2" fill="#fff" stroke="#d1d5db" stroke-width="4"/><rect x="101" y="23" width="98" height="164" fill="#76ABAE"/><circle cx="150" cy="78" r="30" fill="#ffd36b"/><path d="M101 131q31-45 51-4t47-17v77h-98Z" fill="#FF5722"/><path d="M101 150q25-25 51-4t47-15v56h-98Z" fill="#303841"/><text x="150" y="54" text-anchor="middle" fill="#fff" font-size="11" font-weight="700" font-family="Arial">MAKE IT</text><text x="150" y="68" text-anchor="middle" fill="#fff" font-size="13" font-weight="700" font-family="Arial">BRIGHT</text>
+                            </svg>
+                        </div>
+                        <h3 class="mt-3 text-center text-sm font-medium text-slate-800">Poster Printing</h3>
+                    </a>
+                    <a href="#order-placement-section" data-product-category="photo" class="overview-product-card group rounded-lg border border-slate-300 bg-white p-3.5 transition-shadow hover:shadow-md">
+                        <div class="flex h-52 items-center justify-center overflow-hidden bg-slate-50">
+                            <svg viewBox="0 0 300 210" role="img" aria-label="Printed photo print illustration" class="h-full w-full">
+                                <rect x="49" y="35" width="202" height="140" fill="#fff" stroke="#d1d5db" stroke-width="3"/><rect x="60" y="46" width="180" height="118" fill="#d9eef0"/><circle cx="193" cy="79" r="20" fill="#f3cd76"/><path d="M60 132 109 87l34 35 26-28 71 53v17H60Z" fill="#76ABAE"/><path d="m60 144 41-28 40 25 29-23 70 38v8H60Z" fill="#466c6e"/>
+                            </svg>
+                        </div>
+                        <h3 class="mt-3 text-center text-sm font-medium text-slate-800">Photo Prints</h3>
+                    </a>
+                    <a href="#order-placement-section" data-product-category="unsupported" class="overview-product-card group rounded-lg border border-slate-300 bg-white p-3.5 transition-shadow hover:shadow-md">
+                        <div class="flex h-52 items-center justify-center overflow-hidden bg-slate-50">
+                            <svg viewBox="0 0 300 210" role="img" aria-label="Printed sticker label sheets illustration" class="h-full w-full">
+                                <g transform="rotate(5 150 105)"><rect x="58" y="34" width="164" height="142" fill="#e5e7eb" stroke="#cbd5e1"/><rect x="68" y="25" width="164" height="142" fill="#fff" stroke="#d1d5db"/>
+                                    <g font-family="Arial" font-size="8" font-weight="700" text-anchor="middle"><g fill="#ffefea" stroke="#f5b7a8"><rect x="78" y="37" width="64" height="38" rx="4"/><rect x="155" y="37" width="64" height="38" rx="4"/><rect x="78" y="84" width="64" height="38" rx="4"/><rect x="155" y="84" width="64" height="38" rx="4"/></g><g fill="#303841"><text x="110" y="57">FRESH &amp; LOCAL</text><text x="187" y="57">MADE FOR YOU</text><text x="110" y="104">THANK YOU!</text><text x="187" y="104">HANDMADE</text></g></g><path d="M78 127h141v27H78Z" fill="#76ABAE"/><text x="148" y="145" text-anchor="middle" fill="#fff" font-size="10" font-family="Arial" font-weight="700">CUSTOM LABELS</text></g>
+                            </svg>
+                        </div>
+                        <h3 class="mt-3 text-center text-sm font-medium text-slate-800">Sticker Labels</h3>
+                    </a>
+                    <a href="#order-placement-section" data-product-category="unsupported" class="overview-product-card group rounded-lg border border-slate-300 bg-white p-3.5 transition-shadow hover:shadow-md">
+                        <div class="flex h-52 items-center justify-center overflow-hidden bg-slate-50">
+                            <svg viewBox="0 0 300 210" role="img" aria-label="Custom business cards illustration" class="h-full w-full">
+                                <rect x="55" y="52" width="185" height="112" rx="4" fill="#e5e7eb" transform="rotate(5 150 108)"/><rect x="62" y="43" width="180" height="112" rx="4" fill="#303841"/><rect x="72" y="53" width="160" height="92" rx="2" fill="#fff"/><circle cx="102" cy="84" r="13" fill="#FF5722"/><circle cx="125" cy="84" r="13" fill="#76ABAE"/><text x="152" y="88" fill="#303841" font-family="Arial" font-size="10" font-weight="700">QUICKPRINT</text><path d="M88 111h124M88 121h80" stroke="#9ca3af" stroke-width="4" stroke-linecap="round"/>
+                            </svg>
+                        </div>
+                        <h3 class="mt-3 text-center text-sm font-medium text-slate-800">Business Cards</h3>
+                    </a>
+                    <a href="#order-placement-section" data-product-category="custom" class="overview-product-card group rounded-lg border border-slate-300 bg-white p-3.5 transition-shadow hover:shadow-md">
+                        <div class="flex h-52 items-center justify-center overflow-hidden bg-slate-50">
+                            <svg viewBox="0 0 300 210" role="img" aria-label="Printed thank you card illustration" class="h-full w-full">
+                                <rect x="49" y="46" width="202" height="125" rx="4" fill="#f2efe5" stroke="#d1d5db" stroke-width="3"/><rect x="62" y="59" width="176" height="99" fill="#fff"/><rect x="72" y="69" width="156" height="79" fill="#eaf3f3"/><rect x="83" y="80" width="134" height="57" fill="none" stroke="#76ABAE" stroke-width="5"/><text x="150" y="116" text-anchor="middle" fill="#303841" font-size="19" font-family="cursive">Thank you</text>
+                            </svg>
+                        </div>
+                        <h3 class="mt-3 text-center text-sm font-medium text-slate-800">Invitations &amp; Custom Printing</h3>
+                    </a>
+                    <a href="#order-placement-section" data-product-category="unsupported" class="overview-product-card group rounded-lg border border-slate-300 bg-white p-3.5 transition-shadow hover:shadow-md">
+                        <div class="flex h-52 items-center justify-center overflow-hidden bg-slate-50">
+                            <svg viewBox="0 0 300 210" role="img" aria-label="Printed packaging wrap and label illustration" class="h-full w-full">
+                                <path d="M89 40h122v131H89Z" fill="#fff" stroke="#d1d5db" stroke-width="3"/><path d="M111 41v130M189 41v130" stroke="#76ABAE" stroke-width="3" stroke-dasharray="5 5"/><path d="M119 66q31-22 62 0v57q-31 22-62 0Z" fill="#f3f4f6" stroke="#303841" stroke-width="3"/><path d="M125 100q25-24 50 0v23q-25 18-50 0Z" fill="#FF5722"/><text x="150" y="153" text-anchor="middle" fill="#303841" font-size="9" font-family="Arial" font-weight="700">CUSTOM WRAP</text>
+                            </svg>
+                        </div>
+                        <h3 class="mt-3 text-center text-sm font-medium text-slate-800">Packaging & Wrap</h3>
+                    </a>
+                    <a href="#order-placement-section" data-product-category="documents" class="overview-product-card group rounded-lg border border-slate-300 bg-white p-3.5 transition-shadow hover:shadow-md">
+                        <div class="flex h-52 items-center justify-center overflow-hidden bg-slate-50">
+                            <svg viewBox="0 0 300 210" role="img" aria-label="Printed document and thesis booklet illustration" class="h-full w-full">
+                                <path d="M82 30h110l30 30v126H82Z" fill="#fff" stroke="#cbd5e1" stroke-width="3"/><path d="M192 30v32h30" fill="#eaf3f3" stroke="#cbd5e1" stroke-width="3"/><rect x="99" y="73" width="105" height="15" rx="2" fill="#76ABAE"/><path d="M101 104h99M101 116h99M101 128h80M101 140h99M101 152h74" stroke="#cbd5e1" stroke-width="5" stroke-linecap="round"/><text x="151" y="84" text-anchor="middle" fill="#fff" font-family="Arial" font-size="8" font-weight="700">DOCUMENT PRINT</text>
+                            </svg>
+                        </div>
+                        <h3 class="mt-3 text-center text-sm font-medium text-slate-800">Documents & Thesis</h3>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <script>
+            function filterOverviewProducts(category) {
+                const categorySelect = document.getElementById('catalog-category-select');
+                if (categorySelect) categorySelect.value = category;
+                const supportedCategories = ['documents', 'photo', 'posters', 'custom'];
+                document.querySelectorAll('.overview-product-card').forEach(card => {
+                    const isSupported = supportedCategories.includes(card.dataset.productCategory);
+                    card.classList.toggle('hidden', !isSupported || (category !== 'all' && card.dataset.productCategory !== category));
+                });
+            }
+            filterOverviewProducts('all');
+        </script>
+    </main>
+
+    <!-- ==============================================================
+         VIEW 2: PUBLIC QUEUE TV LOBBY DISPLAY
+         ============================================================== -->
+    <main id="portal-tv" class="hidden flex-grow tv-screen p-4 sm:p-6 lg:p-8 flex flex-col justify-between">
+        <!-- TV Header -->
+        <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white font-black text-2xl shadow-lg">
+                    QP
+                </div>
+                <div>
+                    <h1 class="text-2xl sm:text-3xl font-black tracking-tight text-white">QuickPrint Hub</h1>
+                    <p class="text-xs text-slate-400 font-medium">Customer Queue & Order Monitoring Display</p>
+                </div>
+            </div>
+
+            <!-- TV Controls & Live Clock -->
+            <div class="flex items-center gap-4">
+                <button type="button" id="tv-toggle-voice-btn" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-600 text-white flex items-center gap-1">
+                    🔊 Audio Chime: ON
+                </button>
+                <button type="button" id="tv-fullscreen-btn" class="p-2 text-slate-400 hover:text-white rounded-lg bg-slate-800" title="Toggle Fullscreen">
+                    <i data-lucide="maximize" class="w-5 h-5"></i>
+                </button>
+                <div id="tv-live-clock" class="text-xl sm:text-2xl font-mono font-bold text-blue-400 tracking-wider">
+                    --:--:--
+                </div>
+            </div>
+        </div>
+
+        <!-- TV 3-Column Display Board -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 my-6 flex-grow">
+            <!-- Col 1: READY FOR PICKUP (5 Cols) -->
+            <div class="lg:col-span-5 flex flex-col">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-black uppercase tracking-wider text-emerald-400 flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-emerald-500 animate-ping"></span>
+                        <span>READY FOR PICKUP</span>
+                    </h2>
+                    <span class="text-xs text-slate-400">Proceed to Counter 1</span>
+                </div>
+                <div id="tv-ready-list" class="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-grow content-start">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <!-- Col 2: NOW PRINTING / PROCESSING (4 Cols) -->
+            <div class="lg:col-span-4 flex flex-col border-t lg:border-t-0 lg:border-l border-slate-800 lg:pl-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-black uppercase tracking-wider text-blue-400 flex items-center gap-2">
+                        <i data-lucide="printer" class="w-5 h-5"></i>
+                        <span>NOW PRINTING</span>
+                    </h2>
+                    <span class="text-xs text-slate-400">In Progress</span>
+                </div>
+                <div id="tv-serving-list" class="space-y-3 flex-grow content-start">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <!-- Col 3: WAITING IN LINE / PENDING (3 Cols) -->
+            <div class="lg:col-span-3 flex flex-col border-t lg:border-t-0 lg:border-l border-slate-800 lg:pl-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-sm font-black uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                        <i data-lucide="clock" class="w-4 h-4"></i>
+                        <span>NEXT IN LINE</span>
+                    </h2>
+                    <span class="text-xs text-slate-500">Sequence</span>
+                </div>
+                <div id="tv-waiting-list" class="flex-grow content-start overflow-y-auto max-h-[500px]">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+        </div>
+
+        <!-- TV Footer Bar -->
+        <div class="pt-4 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 gap-2">
+            <div class="flex items-center gap-4">
+                <span>Active Queue Load: <b id="tv-metric-active-count" class="text-blue-400">0</b> orders</span>
+                <span>•</span>
+                <span>Ready for Handover: <b id="tv-metric-ready-count" class="text-emerald-400">0</b> orders</span>
+            </div>
+            <div class="text-slate-500">
+                Operating Hours: Mon - Sat: 8:00 AM - 7:00 PM • Ground Floor Student Plaza Complex
+            </div>
+        </div>
+    </main>
+
+    <!-- ==============================================================
+         VIEW 3: STAFF DASHBOARD
+         ============================================================== -->
+    <main id="portal-staff" class="hidden flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+        <!-- Staff Top Bar -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-4 border-b border-slate-200">
+            <div>
+                <div class="flex items-center gap-2">
+                    <span class="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 font-bold text-xs uppercase tracking-wide">STAFF PORTAL</span>
+                    <span class="text-xs text-slate-400">• Flowchart Operations</span>
+                </div>
+                <h1 class="text-2xl sm:text-3xl font-black text-slate-900 mt-1">Order & Queue Management Console</h1>
+            </div>
+
+            <!-- Sub Nav Buttons (Flowchart modules) -->
+            <div class="flex items-center gap-1.5 flex-wrap">
+                <button type="button" data-staff-tab="queue" class="px-3.5 py-2 text-xs font-bold rounded-lg bg-blue-600 text-white shadow-sm flex items-center gap-1.5">
+                    <i data-lucide="list" class="w-3.5 h-3.5"></i> Queue List
+                </button>
+                <button type="button" data-staff-tab="new-order" class="px-3.5 py-2 text-xs font-semibold rounded-lg text-slate-600 hover:bg-slate-100 flex items-center gap-1.5">
+                    <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> Create Order
+                </button>
+                <button type="button" data-staff-tab="payment" class="px-3.5 py-2 text-xs font-semibold rounded-lg text-slate-600 hover:bg-slate-100 flex items-center gap-1.5">
+                    <i data-lucide="credit-card" class="w-3.5 h-3.5"></i> Cashiering
+                </button>
+                <button type="button" data-staff-tab="release" class="px-3.5 py-2 text-xs font-semibold rounded-lg text-slate-600 hover:bg-slate-100 flex items-center gap-1.5">
+                    <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i> Release Order
+                </button>
+                <button type="button" data-staff-tab="records" class="px-3.5 py-2 text-xs font-semibold rounded-lg text-slate-600 hover:bg-slate-100 flex items-center gap-1.5">
+                    <i data-lucide="archive" class="w-3.5 h-3.5"></i> Order Records
+                </button>
+            </div>
+        </div>
+
+        <!-- Metric KPI Cards -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                <span class="text-xs text-slate-400 font-bold block">TODAY'S ORDERS</span>
+                <span id="staff-metric-today-orders" class="text-2xl font-black text-slate-900 mt-1 block">0</span>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-amber-200 bg-amber-50/30 shadow-sm">
+                <span class="text-xs text-amber-700 font-bold block">IN QUEUE (PENDING)</span>
+                <span id="staff-metric-pending" class="text-2xl font-black text-amber-600 mt-1 block">0</span>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-blue-200 bg-blue-50/30 shadow-sm">
+                <span class="text-xs text-blue-700 font-bold block">ACTIVE PRINTING</span>
+                <span id="staff-metric-processing" class="text-2xl font-black text-blue-600 mt-1 block">0</span>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-emerald-200 bg-emerald-50/30 shadow-sm">
+                <span class="text-xs text-emerald-700 font-bold block">READY FOR PICKUP</span>
+                <span id="staff-metric-ready" class="text-2xl font-black text-emerald-600 mt-1 block">0</span>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm col-span-2 sm:col-span-1">
+                <span class="text-xs text-slate-400 font-bold block">TODAY'S SALES</span>
+                <span id="staff-metric-revenue" class="text-2xl font-black text-blue-700 font-mono mt-1 block">₱0.00</span>
+            </div>
+        </div>
+
+        <!-- STAFF SUB-PANE 1: QUEUE MANAGEMENT -->
+        <div id="staff-pane-queue" class="space-y-4">
+            <div class="bg-white p-4 rounded-xl border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div class="flex items-center gap-2">
+                    <button type="button" data-queue-filter="ALL" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-blue-600 text-white">All Active</button>
+                    <button type="button" data-queue-filter="PENDING" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200">Pending</button>
+                    <button type="button" data-queue-filter="PROCESSING" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200">Processing</button>
+                    <button type="button" data-queue-filter="READY" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200">Ready</button>
+                </div>
+                <div class="w-full sm:w-72">
+                    <input type="text" id="staff-queue-filter-search" placeholder="Search customer, queue #..." class="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                </div>
+            </div>
+
+            <!-- Queue Table -->
+            <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold text-xs uppercase tracking-wider">
+                                <th class="py-3 px-4">Queue #</th>
+                                <th class="py-3 px-4">Customer</th>
+                                <th class="py-3 px-4">Service & Specs</th>
+                                <th class="py-3 px-4">Status & Progress</th>
+                                <th class="py-3 px-4">Payment</th>
+                                <th class="py-3 px-4">Time</th>
+                                <th class="py-3 px-4 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="staff-queue-table-body">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- STAFF SUB-PANE 2: CREATE WALK-IN ORDER -->
+        <div id="staff-pane-new-order" class="hidden bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 max-w-4xl mx-auto shadow-sm">
+            <h2 class="text-xl font-bold text-slate-900 mb-1 flex items-center gap-2">
+                <i data-lucide="clipboard-list" class="w-5 h-5 text-blue-600"></i>
+                <span>Point-of-Sale: Walk-in / Phone Order</span>
+            </h2>
+            <p class="text-xs text-slate-500 mb-6">Enter customer specifications to calculate charges and assign the next sequential Queue Number.</p>
+
+            <form id="staff-new-order-form" class="space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Customer Name *</label>
+                        <input type="text" id="staff-order-name" placeholder="Full name" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300" required>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Contact Number *</label>
+                        <input type="text" id="staff-order-contact" placeholder="09XX-XXX-XXXX" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300" required>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Email (Optional)</label>
+                    <input type="email" id="staff-order-email" placeholder="Optional order contact" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Service Type *</label>
+                    <select id="staff-order-service" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white" required>
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Paper Size</label>
+                        <select id="staff-order-size" class="w-full px-2.5 py-1.5 text-xs rounded border border-slate-300 bg-white">
+                            <option value="short">Short</option>
+                            <option value="a4" selected>A4</option>
+                            <option value="long">Long</option>
+                            <option value="a3">A3</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Paper Type</label>
+                        <select id="staff-order-type" class="w-full px-2.5 py-1.5 text-xs rounded border border-slate-300 bg-white">
+                            <option value="regular70" selected>70gsm Copier</option>
+                            <option value="book80">80gsm Book Paper</option>
+                            <option value="glossyPhoto">Glossy Photo</option>
+                            <option value="matteCardstock">Matte Cardstock</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Side</label>
+                        <select id="staff-order-side" class="w-full px-2.5 py-1.5 text-xs rounded border border-slate-300 bg-white">
+                            <option value="single" selected>Single-sided</option>
+                            <option value="double">Double-sided</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Binding</label>
+                        <select id="staff-order-binding" class="w-full px-2.5 py-1.5 text-xs rounded border border-slate-300 bg-white">
+                            <option value="none" selected>None</option>
+                            <option value="staple">Corner Staple</option>
+                            <option value="ring">Ring Bind</option>
+                            <option value="soft">Soft Bind</option>
+                            <option value="hard">Hardbound</option>
+                            <option value="laminate">Laminate</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Pages</label>
+                        <input type="number" id="staff-order-pages" value="1" min="1" class="w-full px-3 py-1.5 text-xs rounded border border-slate-300 font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Copies</label>
+                        <input type="number" id="staff-order-copies" value="1" min="1" class="w-full px-3 py-1.5 text-xs rounded border border-slate-300 font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Initial Deposit (₱)</label>
+                        <input type="number" id="staff-order-deposit" value="0" min="0" step="0.50" class="w-full px-3 py-1.5 text-xs rounded border border-slate-300 font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Deposit Method</label>
+                        <select id="staff-order-pay-method" class="w-full px-2.5 py-1.5 text-xs rounded border border-slate-300 bg-white">
+                            <option value="Cash" selected>Cash</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">File Name / Label</label>
+                        <input type="text" id="staff-order-filename" placeholder="e.g. Flashdrive_Thesis_Doc.docx" class="w-full px-3 py-1.5 text-xs rounded border border-slate-300">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Staff Notes</label>
+                        <input type="text" id="staff-order-notes" placeholder="e.g. Needs immediate rush pickup" class="w-full px-3 py-1.5 text-xs rounded border border-slate-300">
+                    </div>
+                </div>
+
+                <!-- Live Price Preview Box -->
+                <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+                    <div>
+                        <span class="text-xs text-slate-500">Computed Order Total:</span>
+                        <div class="flex items-center gap-3 mt-0.5">
+                            <span id="staff-order-calc-total" class="text-2xl font-black font-mono text-blue-700">₱0.00</span>
+                            <span class="text-xs text-slate-400">Subtotal: <span id="staff-order-calc-subtotal">₱0.00</span></span>
+                        </div>
+                    </div>
+                    <button type="submit" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-lg shadow-sm flex items-center gap-1.5">
+                        <i data-lucide="check" class="w-4 h-4"></i> Save Order & Assign Queue #
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- STAFF SUB-PANE 3: CASHIERING & PAYMENTS -->
+        <div id="staff-pane-payment" class="hidden space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="font-bold text-slate-900 text-lg">Orders Awaiting Payment</h3>
+                <span class="text-xs text-slate-500">Collect payments, record cash or digital receipts, and clear remaining balances.</span>
+            </div>
+            <div id="staff-payment-cards-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Dynamically populated -->
+            </div>
+        </div>
+
+        <!-- STAFF SUB-PANE 4: RELEASE ORDER -->
+        <div id="staff-pane-release" class="hidden space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="font-bold text-slate-900 text-lg">Orders Ready for Handover</h3>
+                <span class="text-xs text-slate-500">Enforces flowchart check: Order must be <b>Ready</b> and payment <b>Settled</b> before completing.</span>
+            </div>
+            <div id="staff-release-orders-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Dynamically populated -->
+            </div>
+        </div>
+
+        <!-- STAFF SUB-PANE 5: ORDER RECORDS & SEARCH -->
+        <div id="staff-pane-records" class="hidden space-y-4">
+            <div class="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-between">
+                <div class="w-full max-w-md">
+                    <input type="text" id="staff-records-search" placeholder="Search by Queue #, tracking, or customer..." class="w-full px-3.5 py-2 text-xs rounded-lg border border-slate-300">
+                </div>
+                <span class="text-xs text-slate-400">Complete transaction and queue log</span>
+            </div>
+            <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold text-xs">
+                            <th class="py-2.5 px-3">Queue #</th>
+                            <th class="py-2.5 px-3">Customer</th>
+                            <th class="py-2.5 px-3">Service</th>
+                            <th class="py-2.5 px-3">Status</th>
+                            <th class="py-2.5 px-3">Total / Balance</th>
+                            <th class="py-2.5 px-3">Date</th>
+                            <th class="py-2.5 px-3 text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="staff-records-table-body">
+                        <!-- Populated dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- ==============================================================
+         VIEW 4: ADMIN DASHBOARD
+         ============================================================== -->
+    <main id="portal-admin" class="hidden flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+        <!-- Admin Top Bar -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-4 border-b border-slate-200">
+            <div>
+                <div class="flex items-center gap-2">
+                    <span class="px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800 font-bold text-xs uppercase tracking-wide">ADMINISTRATOR CONTROL</span>
+                    <span class="text-xs text-slate-400">• Flowchart Modules</span>
+                </div>
+                <h1 class="text-2xl sm:text-3xl font-black text-slate-900 mt-1">System & Service Management Hub</h1>
+            </div>
+
+            <!-- Admin Sub-Nav -->
+            <div class="flex items-center gap-1.5 flex-wrap">
+                <button type="button" data-admin-tab="analytics" class="px-3 py-2 text-xs font-bold rounded-lg bg-indigo-700 text-white shadow-sm flex items-center gap-1.5">
+                    <i data-lucide="bar-chart-3" class="w-3.5 h-3.5"></i> Analytics
+                </button>
+                <button type="button" data-admin-tab="users" class="px-3 py-2 text-xs font-semibold rounded-lg text-slate-600 hover:bg-slate-100 flex items-center gap-1.5">
+                    <i data-lucide="users" class="w-3.5 h-3.5"></i> Staff Accounts
+                </button>
+                <button type="button" data-admin-tab="services" class="px-3 py-2 text-xs font-semibold rounded-lg text-slate-600 hover:bg-slate-100 flex items-center gap-1.5">
+                    <i data-lucide="printer" class="w-3.5 h-3.5"></i> Services Catalog
+                </button>
+                <button type="button" data-admin-tab="pricing" class="px-3 py-2 text-xs font-semibold rounded-lg text-slate-600 hover:bg-slate-100 flex items-center gap-1.5">
+                    <i data-lucide="tags" class="w-3.5 h-3.5"></i> Price Matrix
+                </button>
+                <button type="button" data-admin-tab="orders" class="px-3 py-2 text-xs font-semibold rounded-lg text-slate-600 hover:bg-slate-100 flex items-center gap-1.5">
+                    <i data-lucide="database" class="w-3.5 h-3.5"></i> Master Orders
+                </button>
+                <button type="button" data-admin-tab="reports" class="px-3 py-2 text-xs font-semibold rounded-lg text-slate-600 hover:bg-slate-100 flex items-center gap-1.5">
+                    <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i> Official Reports
+                </button>
+            </div>
+        </div>
+
+        <!-- Admin Overview Stat Cards -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                <span class="text-xs text-slate-400 font-bold block">TOTAL GROSS REVENUE</span>
+                <span id="admin-stat-gross-revenue" class="text-3xl font-black text-indigo-700 font-mono mt-1 block">₱0.00</span>
+            </div>
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                <span class="text-xs text-slate-400 font-bold block">TOTAL ORDERS RECORDED</span>
+                <span id="admin-stat-total-orders" class="text-3xl font-black text-slate-900 mt-1 block">0</span>
+            </div>
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                <span class="text-xs text-slate-400 font-bold block">ACTIVE QUEUE IN SHOP</span>
+                <span id="admin-stat-active-queue" class="text-3xl font-black text-blue-600 mt-1 block">0</span>
+            </div>
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                <span class="text-xs text-slate-400 font-bold block">ORDER COMPLETION RATE</span>
+                <span id="admin-stat-completed-rate" class="text-3xl font-black text-emerald-600 mt-1 block">0%</span>
+            </div>
+        </div>
+
+        <!-- ADMIN PANE 1: ANALYTICS & CHARTS -->
+        <div id="admin-pane-analytics" class="space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- 7 Day Revenue Trend Chart (8 Cols) -->
+                <div class="lg:col-span-8 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                    <h3 class="font-bold text-slate-900 text-base mb-1">Daily Sales Trend (Last 7 Days)</h3>
+                    <p class="text-xs text-slate-400 mb-4">Financial performance and daily counter revenue collection.</p>
+                    <div class="h-64">
+                        <canvas id="admin-chart-revenue"></canvas>
+                    </div>
+                </div>
+
+                <!-- Services Breakdown Donut Chart (4 Cols) -->
+                <div class="lg:col-span-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                    <h3 class="font-bold text-slate-900 text-base mb-1">Printing Services Share</h3>
+                    <p class="text-xs text-slate-400 mb-4">Distribution by customer service category.</p>
+                    <div class="h-64 flex items-center justify-center">
+                        <canvas id="admin-chart-services"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent System Activity Audit -->
+            <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+                <h3 class="font-bold text-slate-900 text-base mb-3">Live System Activity Audit Trail</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold text-xs">
+                                <th class="py-2 px-3">Time</th>
+                                <th class="py-2 px-3">Action</th>
+                                <th class="py-2 px-3">Details</th>
+                                <th class="py-2 px-3">Actor</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-recent-logs-body">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ADMIN PANE 2: USER ACCOUNT MANAGEMENT -->
+        <div id="admin-pane-users" class="hidden space-y-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="font-bold text-slate-900 text-lg">Staff User Accounts</h3>
+                    <p class="text-xs text-slate-500">Manage shop operators, cashiers, and administrators with role-based access.</p>
+                </div>
+                <button type="button" onclick="document.getElementById('admin-add-user-modal').classList.remove('hidden')" class="px-3.5 py-2 bg-indigo-700 hover:bg-indigo-800 text-white font-bold text-xs rounded-lg shadow-sm flex items-center gap-1.5">
+                    <i data-lucide="user-plus" class="w-4 h-4"></i> Add Staff Account
+                </button>
+            </div>
+            <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold text-xs">
+                            <th class="py-3 px-4">User ID</th>
+                            <th class="py-3 px-4">Full Name & Username</th>
+                            <th class="py-3 px-4">Role</th>
+                            <th class="py-3 px-4">Contact Info</th>
+                            <th class="py-3 px-4">Status</th>
+                            <th class="py-3 px-4 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-users-table-body">
+                        <!-- Populated dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ADMIN PANE 3: PRINTING SERVICES CATALOG -->
+        <div id="admin-pane-services" class="hidden space-y-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="font-bold text-slate-900 text-lg">Printing Service Catalog</h3>
+                    <p class="text-xs text-slate-500">Manage available printing services, descriptions, and base rates.</p>
+                </div>
+                <button type="button" onclick="document.getElementById('admin-add-service-modal').classList.remove('hidden')" class="px-3.5 py-2 bg-indigo-700 hover:bg-indigo-800 text-white font-bold text-xs rounded-lg shadow-sm flex items-center gap-1.5">
+                    <i data-lucide="plus" class="w-4 h-4"></i> Add New Service
+                </button>
+            </div>
+            <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold text-xs">
+                            <th class="py-3 px-4">Code</th>
+                            <th class="py-3 px-4">Service Name & Description</th>
+                            <th class="py-3 px-4">Category</th>
+                            <th class="py-3 px-4">Base Rate</th>
+                            <th class="py-3 px-4">Status</th>
+                            <th class="py-3 px-4 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-services-table-body">
+                        <!-- Populated dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ADMIN PANE 4: PRICE MANAGEMENT -->
+        <div id="admin-pane-pricing" class="hidden bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm max-w-4xl mx-auto">
+            <h3 class="text-lg font-bold text-slate-900 mb-1">Printing Surcharges & Matrix Configuration</h3>
+            <p class="text-xs text-slate-500 mb-6">Adjust paper size surcharges, premium paper materials, finishing fees, and student discounts. Changes take effect instantly across all calculators.</p>
+
+            <form id="admin-pricing-rules-form" class="space-y-6">
+                <!-- Paper Sizes Surcharge -->
+                <div>
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">Paper Size Surcharges (₱ per sheet)</h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-700 mb-1">A4 Surcharge</label>
+                            <input type="number" id="price-size-a4" step="0.25" class="w-full px-3 py-1.5 text-xs rounded border border-slate-300 font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-700 mb-1">Long / Legal Surcharge</label>
+                            <input type="number" id="price-size-long" step="0.25" class="w-full px-3 py-1.5 text-xs rounded border border-slate-300 font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-700 mb-1">A3 Tabloid Surcharge</label>
+                            <input type="number" id="price-size-a3" step="0.50" class="w-full px-3 py-1.5 text-xs rounded border border-slate-300 font-mono">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Paper Materials Surcharge -->
+                <div class="pt-4 border-t border-slate-100">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">Paper Material Surcharges (₱ per sheet)</h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-700 mb-1">80gsm Book Paper</label>
+                            <input type="number" id="price-paper-book80" step="0.25" class="w-full px-3 py-1.5 text-xs rounded border border-slate-300 font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-700 mb-1">Glossy Photo Paper (230gsm)</label>
+                            <input type="number" id="price-paper-glossy" step="1.00" class="w-full px-3 py-1.5 text-xs rounded border border-slate-300 font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-700 mb-1">Matte Cardstock (250gsm)</label>
+                            <input type="number" id="price-paper-matte" step="1.00" class="w-full px-3 py-1.5 text-xs rounded border border-slate-300 font-mono">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Binding Fees -->
+                <div class="pt-4 border-t border-slate-100">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">Binding & Finishing Fees (₱ per unit)</h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-700 mb-1">Ring / Spiral</label>
+                            <input type="number" id="price-bind-ring" step="1.00" class="w-full px-3 py-1.5 text-xs rounded border border-slate-300 font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-700 mb-1">Soft Bind</label>
+                            <input type="number" id="price-bind-soft" step="1.00" class="w-full px-3 py-1.5 text-xs rounded border border-slate-300 font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-700 mb-1">Hardbound Gold Foil</label>
+                            <input type="number" id="price-bind-hard" step="5.00" class="w-full px-3 py-1.5 text-xs rounded border border-slate-300 font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-700 mb-1">Lamination Sheet</label>
+                            <input type="number" id="price-bind-lam" step="1.00" class="w-full px-3 py-1.5 text-xs rounded border border-slate-300 font-mono">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-slate-200 flex justify-end">
+                    <button type="submit" class="px-6 py-2.5 bg-indigo-700 hover:bg-indigo-800 text-white font-bold text-sm rounded-lg shadow-sm">
+                        Save Updated Price Configuration
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- ADMIN PANE 5: MASTER ORDER AUDIT -->
+        <div id="admin-pane-orders" class="hidden space-y-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="font-bold text-slate-900 text-lg">Master Orders Audit</h3>
+                    <p class="text-xs text-slate-500">Administrator override control and raw data export.</p>
+                </div>
+                <button type="button" id="admin-export-csv-btn" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-sm flex items-center gap-1.5">
+                    <i data-lucide="download" class="w-4 h-4"></i> Export to CSV
+                </button>
+            </div>
+            <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold text-xs">
+                            <th class="py-2.5 px-3">Queue #</th>
+                            <th class="py-2.5 px-3">Customer</th>
+                            <th class="py-2.5 px-3">Service</th>
+                            <th class="py-2.5 px-3">Status Override</th>
+                            <th class="py-2.5 px-3">Total Cost</th>
+                            <th class="py-2.5 px-3">Payment</th>
+                            <th class="py-2.5 px-3">Date</th>
+                            <th class="py-2.5 px-3 text-right">View</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-master-orders-tbody">
+                        <!-- Populated dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ADMIN PANE 6: OFFICIAL SALES & QUEUE REPORT -->
+        <div id="admin-pane-reports" class="hidden space-y-6">
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h3 class="font-bold text-slate-900 text-lg">Official Sales & Queue Report Generator</h3>
+                    <p class="text-xs text-slate-500">Filter transactions by date range and generate an official printable audit report with signatory lines.</p>
+                </div>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <input type="date" id="report-date-from" class="px-3 py-1.5 text-xs rounded border border-slate-300">
+                    <span class="text-slate-400 text-xs">to</span>
+                    <input type="date" id="report-date-to" class="px-3 py-1.5 text-xs rounded border border-slate-300">
+                    <button type="button" id="admin-gen-report-btn" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded shadow-sm">
+                        Filter
+                    </button>
+                    <button type="button" id="admin-print-official-report-btn" class="px-4 py-1.5 bg-indigo-700 hover:bg-indigo-800 text-white font-bold text-xs rounded shadow-sm flex items-center gap-1.5">
+                        <i data-lucide="printer" class="w-3.5 h-3.5"></i> Print Official Report
+                    </button>
+                </div>
+            </div>
+
+            <!-- Report KPI Summary -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="p-5 bg-white rounded-xl border border-slate-200 shadow-sm">
+                    <span class="text-xs text-slate-400 font-bold block">TOTAL REPORT REVENUE</span>
+                    <span id="report-calc-revenue" class="text-2xl font-black text-indigo-700 font-mono mt-1 block">₱0.00</span>
+                </div>
+                <div class="p-5 bg-white rounded-xl border border-slate-200 shadow-sm">
+                    <span class="text-xs text-slate-400 font-bold block">TOTAL ORDERS IN RANGE</span>
+                    <span id="report-calc-orders" class="text-2xl font-black text-slate-800 mt-1 block">0</span>
+                </div>
+                <div class="p-5 bg-white rounded-xl border border-slate-200 shadow-sm">
+                    <span class="text-xs text-slate-400 font-bold block">COMPLETED & RELEASED</span>
+                    <span id="report-calc-completed" class="text-2xl font-black text-emerald-600 mt-1 block">0</span>
+                </div>
+            </div>
+
+            <!-- Transactions Table in Report -->
+            <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                <div class="p-4 border-b border-slate-200 font-bold text-xs text-slate-700 uppercase tracking-wider">
+                    Itemized Payment Transactions Ledger
+                </div>
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold text-xs">
+                            <th class="py-2.5 px-3">Txn Code</th>
+                            <th class="py-2.5 px-3">Queue #</th>
+                            <th class="py-2.5 px-3">Customer</th>
+                            <th class="py-2.5 px-3">Amount</th>
+                            <th class="py-2.5 px-3">Method & Ref</th>
+                            <th class="py-2.5 px-3">Cashier</th>
+                            <th class="py-2.5 px-3">Date/Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="report-transactions-table-body">
+                        <!-- Populated dynamically -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Danger Zone / Database Reset -->
+            <div class="p-5 bg-red-50/50 rounded-xl border border-red-200 flex items-center justify-between">
+                <div>
+                    <h4 class="font-bold text-red-900 text-sm">Demo Data Management</h4>
+                    <p class="text-xs text-red-700">Restore all initial mock orders, active queue jobs, and default service catalogs.</p>
+                </div>
+                <button type="button" id="admin-reset-db-btn" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-lg shadow-sm">
+                    Reset to Clean Sample Database
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- ==============================================================
+         GLOBAL FOOTER
+         ============================================================== -->
+    <footer class="bg-slate-900 text-slate-400 text-xs py-8 border-t border-slate-800 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-black text-sm">
+                    QP
+                </div>
+                <div>
+                    <span class="font-bold text-slate-200">QuickPrint Hub</span> — Queue & Order Management System
+                                            <p class="text-[11px] text-slate-500">ICCT Colleges • College of Computer Studies</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-4 text-slate-400">
+                <button type="button" data-open-case-study class="hover:text-blue-400">Case Study</button>
+                <span>•</span>
+
+            </div>
+        </div>
+    </footer>
+
+    <!-- ==============================================================
+         MODALS & OVERLAYS
+         ============================================================== -->
+
+    <!-- 1. ORDER CONFIRMATION MODAL -->
+    <div id="order-confirmation-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 sm:p-8 shadow-2xl relative text-center">
+            <div class="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-4">
+                <i data-lucide="check" class="w-8 h-8"></i>
+            </div>
+            <h3 class="text-xl font-black text-slate-900">Order Placed Successfully!</h3>
+            <p class="text-xs text-slate-500 mt-1">Your printing request has been queued in our system.</p>
+
+            <!-- Ticket Card Preview -->
+            <div class="ticket-paper p-5 my-6 bg-slate-50 text-left">
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Assigned Queue No.</span>
+                    <span id="confirm-modal-tracking" class="text-xs font-mono text-slate-500 font-bold">QP-2026-106</span>
+                </div>
+                <div id="confirm-modal-queue" class="text-5xl font-black font-mono text-blue-700 tracking-wider my-1">
+                    Q-106
+                </div>
+                <div class="mt-4 pt-3 border-t border-slate-200 text-xs space-y-1">
+                    <div class="flex justify-between"><span class="text-slate-500">Customer:</span><b id="confirm-modal-name">Maria Santos</b></div>
+                    <div class="flex justify-between"><span class="text-slate-500">Service:</span><span id="confirm-modal-service">Document Printing</span></div>
+                    <div class="flex justify-between"><span class="text-slate-500">Specs:</span><span id="confirm-modal-specs">10 pgs × 1 copy</span></div>
+                    <div class="flex justify-between font-bold text-slate-900 pt-1 border-t border-slate-200">
+                        <span>Total Payable:</span><span id="confirm-modal-total" class="font-mono text-blue-700 text-sm">₱20.00</span>
+                    </div>
+                </div>
+                <div class="barcode-stripes mt-4"></div>
+            </div>
+
+            <div class="flex flex-col gap-2">
+                <button type="button" id="confirm-modal-print-btn" class="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-sm flex items-center justify-center gap-2">
+                    <i data-lucide="printer" class="w-4 h-4"></i> Print Customer Claim Slip
+                </button>
+                <button type="button" id="confirm-modal-track-btn" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-sm flex items-center justify-center gap-2">
+                    <i data-lucide="search" class="w-4 h-4"></i> Track This Order Live
+                </button>
+                <button type="button" onclick="CustomerController.closeConfirmationModal()" class="w-full py-2 text-xs font-semibold text-slate-500 hover:text-slate-800">
+                    Done & Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. STAFF UPDATE PROGRESS MODAL -->
+    <div id="staff-progress-modal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl">
+            <h3 class="font-bold text-slate-900 text-base mb-1">Update Order Status</h3>
+            <p class="text-xs text-slate-500 mb-4">Update the order to one of the system's queue statuses.</p>
+            
+            <div class="p-3 bg-slate-50 rounded-lg text-xs space-y-1 mb-4">
+                <div class="flex justify-between"><span>Queue Number:</span><b id="progress-modal-queue" class="font-mono text-blue-700"></b></div>
+                <div class="flex justify-between"><span>Customer:</span><span id="progress-modal-name"></span></div>
+                <div class="flex justify-between"><span>Service:</span><span id="progress-modal-service"></span></div>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1" for="progress-modal-status">Order Status</label>
+                    <select id="progress-modal-status" class="w-full px-3 py-1.5 text-xs rounded border border-slate-300 bg-white">
+                        <option value="PENDING">Pending</option>
+                        <option value="PROCESSING">Processing</option>
+                        <option value="READY">Ready for pickup</option>
+                        <option value="COMPLETED">Completed</option>
+                    </select>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                    <button type="button" onclick="StaffController.closeProgressModal()" class="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded">Cancel</button>
+                    <button type="button" onclick="StaffController.saveProgressModal()" class="px-4 py-1.5 text-xs font-bold bg-blue-600 text-white rounded hover:bg-blue-700 shadow-sm">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. STAFF PAYMENT CASHIER MODAL -->
+    <div id="staff-payment-modal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl">
+            <h3 class="font-bold text-slate-900 text-base mb-1">Accept Payment</h3>
+            <p class="text-xs text-slate-500 mb-4">Record cash or electronic transfer to update remaining balance.</p>
+
+            <div class="p-3 bg-slate-50 rounded-lg text-xs space-y-1 mb-4 font-medium">
+                <div class="flex justify-between"><span>Queue Number:</span><b id="pay-modal-queue" class="font-mono text-blue-700"></b></div>
+                <div class="flex justify-between"><span>Customer:</span><span id="pay-modal-customer"></span></div>
+                <div class="flex justify-between"><span>Total Cost:</span><span id="pay-modal-total"></span></div>
+                <div class="flex justify-between"><span>Paid So Far:</span><span id="pay-modal-already-paid" class="text-emerald-600"></span></div>
+                <div class="flex justify-between font-bold text-red-600 pt-1 border-t border-slate-200">
+                    <span>Remaining Balance:</span><span id="pay-modal-balance"></span>
+                </div>
+            </div>
+
+            <form id="staff-payment-modal-form" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Payment Amount (₱) *</label>
+                    <input type="number" id="pay-modal-amount" step="0.50" min="1" class="w-full px-3 py-1.5 text-sm font-mono font-bold text-blue-700 rounded border border-slate-300" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Payment Method</label>
+                    <select id="pay-modal-method" class="w-full px-2.5 py-1.5 text-xs rounded border border-slate-300 bg-white">
+                        <option value="Cash" selected>Cash</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Ref / Receipt #</label>
+                    <input type="text" id="pay-modal-ref" placeholder="Optional e.g. GCash Ref #" class="w-full px-3 py-1.5 text-xs rounded border border-slate-300">
+                </div>
+                <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                    <button type="button" onclick="StaffController.closePaymentModal()" class="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded">Cancel</button>
+                    <button type="submit" class="px-4 py-1.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded shadow-sm">Confirm & Print</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 4. ORDER DETAILS MODAL -->
+    <div id="staff-details-modal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="font-bold text-slate-900 text-base">Order Specifications & Audit</h3>
+                <span id="det-modal-queue" class="font-mono font-bold text-blue-700 text-lg"></span>
+            </div>
+            <div class="text-xs text-slate-500 mb-3">Tracking Code: <span id="det-modal-tracking" class="font-mono"></span></div>
+
+            <div class="space-y-3 text-xs">
+                <div class="p-3 bg-slate-50 rounded-lg">
+                    <span class="text-slate-400 block font-bold text-[10px]">CUSTOMER</span>
+                    <span id="det-modal-customer" class="font-bold text-slate-800 text-sm block"></span>
+                    <span id="det-modal-contact" class="text-slate-600"></span>
+                </div>
+                <div class="p-3 bg-slate-50 rounded-lg">
+                    <span class="text-slate-400 block font-bold text-[10px]">PRINTING SPECIFICATIONS</span>
+                    <span id="det-modal-service" class="font-bold text-blue-700 block mb-1"></span>
+                    <ul id="det-modal-specs" class="space-y-1 text-slate-600 pl-1"></ul>
+                </div>
+                <div class="p-3 bg-slate-50 rounded-lg flex justify-between font-bold">
+                    <span>Total: <span id="det-modal-total" class="font-mono text-slate-900"></span></span>
+                    <span>Paid: <span id="det-modal-paid" class="font-mono text-emerald-600"></span></span>
+                    <span>Balance: <span id="det-modal-balance" class="font-mono text-red-600"></span></span>
+                </div>
+            </div>
+
+            <div class="mt-4 pt-3 border-t border-slate-100 flex justify-end">
+                <button type="button" onclick="StaffController.closeDetailsModal()" class="px-4 py-1.5 bg-slate-800 text-white font-bold text-xs rounded-lg">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. ADMIN ADD USER MODAL -->
+    <div id="admin-add-user-modal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl">
+            <h3 class="font-bold text-slate-900 text-base mb-1">Add New Staff / Admin Account</h3>
+            <p class="text-xs text-slate-500 mb-4">Create login credentials for shop counter personnel or managers.</p>
+            <form id="admin-add-user-form" class="space-y-3 text-xs">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Full Name *</label>
+                    <input type="text" id="new-user-fullname" placeholder="e.g. Jane Doe" class="w-full px-3 py-1.5 rounded border border-slate-300" required>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Username *</label>
+                        <input type="text" id="new-user-username" placeholder="jdoe" class="w-full px-3 py-1.5 rounded border border-slate-300" required>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Password *</label>
+                        <input type="password" id="new-user-password" placeholder="••••••" class="w-full px-3 py-1.5 rounded border border-slate-300" required>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Role *</label>
+                        <select id="new-user-role" class="w-full px-2.5 py-1.5 rounded border border-slate-300 bg-white">
+                            <option value="STAFF" selected>Staff / Cashier</option>
+                            <option value="ADMIN">Administrator</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Contact No.</label>
+                        <input type="text" id="new-user-contact" placeholder="09XX-XXX-XXXX" class="w-full px-3 py-1.5 rounded border border-slate-300">
+                    </div>
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Email</label>
+                    <input type="email" id="new-user-email" placeholder="staff@quickprint.com" class="w-full px-3 py-1.5 rounded border border-slate-300">
+                </div>
+                <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="document.getElementById('admin-add-user-modal').classList.add('hidden')" class="px-3 py-1.5 text-slate-600 hover:bg-slate-100 rounded">Cancel</button>
+                    <button type="submit" class="px-4 py-1.5 font-bold bg-indigo-700 hover:bg-indigo-800 text-white rounded">Create Account</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 6. ADMIN ADD SERVICE MODAL -->
+    <div id="admin-add-service-modal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl">
+            <h3 class="font-bold text-slate-900 text-base mb-1">Add Printing Service</h3>
+            <p class="text-xs text-slate-500 mb-4">Register a new offering in the service catalog.</p>
+            <form id="admin-add-service-form" class="space-y-3 text-xs">
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Service Name *</label>
+                    <input type="text" id="new-srv-name" placeholder="e.g. Blueprints & CAD Printing" class="w-full px-3 py-1.5 rounded border border-slate-300" required>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Category</label>
+                        <input type="text" id="new-srv-category" placeholder="Architectural" class="w-full px-3 py-1.5 rounded border border-slate-300">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Base Price (₱) *</label>
+                        <input type="number" id="new-srv-price" step="0.50" min="0" placeholder="50.00" class="w-full px-3 py-1.5 rounded border border-slate-300 font-mono" required>
+                    </div>
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Unit Description</label>
+                    <input type="text" id="new-srv-unit" placeholder="per sheet / per unit" class="w-full px-3 py-1.5 rounded border border-slate-300">
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Description</label>
+                    <textarea id="new-srv-desc" rows="2" placeholder="Details about this printing service..." class="w-full px-3 py-1.5 rounded border border-slate-300"></textarea>
+                </div>
+                <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="document.getElementById('admin-add-service-modal').classList.add('hidden')" class="px-3 py-1.5 text-slate-600 hover:bg-slate-100 rounded">Cancel</button>
+                    <button type="submit" class="px-4 py-1.5 font-bold bg-indigo-700 hover:bg-indigo-800 text-white rounded">Add Service</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 7. CASE STUDY & ACADEMIC DOCUMENTATION MODAL -->
+    <div id="case-study-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6">
+        <div class="bg-white rounded-2xl max-w-4xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+            <!-- Modal Header -->
+            <div class="p-6 bg-slate-900 text-white flex items-start justify-between">
+                <div>
+                    <span class="text-xs font-bold uppercase tracking-wider text-blue-400">ICCT Colleges • College of Computer Studies</span>
+                    <h2 id="cs-doc-title" class="text-xl sm:text-2xl font-black mt-1 leading-snug">QuickPrint Hub: A Web-Based Printing Shop Queue and Order Management System</h2>
+                    <p class="text-xs text-slate-400 mt-1">
+                        ICCT Colleges • College of Computer Studies
+                    </p>
+                </div>
+                <button type="button" id="case-study-close-btn" class="text-slate-400 hover:text-white p-1">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+
+            <!-- Document Navigation Tabs -->
+            <div class="flex items-center gap-1 px-6 pt-3 border-b border-slate-200 bg-white overflow-x-auto">
+                <button type="button" data-doc-tab="abstract" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-blue-600 text-white shadow-sm">Abstract</button>
+                <button type="button" data-doc-tab="background" class="px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-600 hover:bg-slate-100">1.1 Background</button>
+                <button type="button" data-doc-tab="problem" class="px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-600 hover:bg-slate-100">1.2 Statement of Problem</button>
+                <button type="button" data-doc-tab="objectives" class="px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-600 hover:bg-slate-100">1.3 Objectives (SO1-SO5)</button>
+                <button type="button" data-doc-tab="scope" class="px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-600 hover:bg-slate-100">1.4 Scope & Delimitations</button>
+                <button type="button" data-doc-tab="flowchart" class="px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-600 hover:bg-slate-100">System Flowcharts</button>
+            </div>
+
+            <!-- Document Content Scroll Area -->
+            <div id="cs-doc-content-area" class="p-6 overflow-y-auto flex-grow">
+                <!-- Populated dynamically by case-study.js -->
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="p-4 bg-slate-50 border-t border-slate-200 flex justify-between items-center text-xs text-slate-500">
+                <span>ICCT Colleges • College of Computer Studies</span>
+                <button type="button" onclick="CaseStudyController.closeModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-lg">
+                    Close Document
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 8. HIDDEN PRINT AREA FOR RECEIPT / REPORTS -->
+    <div id="print-section" class="hidden"></div>
+
+    <!-- ==============================================================
+         JAVASCRIPT CONTROLLERS
+         ============================================================== -->
+    <script src="js/store.js"></script>
+    <script src="js/customer.js"></script>
+    <script src="js/staff.js"></script>
+    <script src="js/admin.js"></script>
+    <script src="js/case-study.js"></script>
+
+    <!-- Navigation & App Coordinator -->
+    <script>
+        const NavigationController = {
+            currentPortal: 'customer',
+
+            init() {
+                this.renderAuthBar();
+                this.switchPortal('customer');
+
+                window.addEventListener('quickprint_state_updated', () => {
+                    this.renderAuthBar();
+                });
+            },
+
+            switchPortal(portalName) {
+                this.currentPortal = portalName;
+                const portals = ['customer', 'staff', 'admin'];
+
+                portals.forEach(p => {
+                    const el = document.getElementById(`portal-${p}`);
+                    const btn = document.querySelector(`[data-portal-btn="${p}"]`);
+                    if (el) {
+                        if (p === portalName) {
+                            el.classList.remove('hidden');
+                        } else {
+                            el.classList.add('hidden');
+                        }
+                    }
+                    if (btn) {
+                        if (p === portalName) {
+                            btn.className = 'px-2.5 py-1.5 text-xs font-bold rounded-lg bg-[#FF5722] text-white shadow-sm flex items-center gap-1.5 transition-all';
+                        } else {
+                            btn.className = 'px-2.5 py-1.5 text-xs font-semibold rounded-lg text-slate-600 hover:bg-slate-100 flex items-center gap-1.5 transition-all';
+                        }
+                    }
+                });
+
+                // Auto-prompt login if accessing staff or admin without session
+                if ((portalName === 'staff' || portalName === 'admin')) {
+                    const user = window.QuickPrintStore.getCurrentUser();
+                    if (!user) {
+                        this.promptLogin(portalName);
+                    }
+                }
+            },
+
+            promptLogin(preferredRole) {
+                const username = prompt(`Please log in to access the ${preferredRole.toUpperCase()} console.\n(Demo accounts: "staff" / "staff123" or "admin" / "admin123")\n\nEnter Username:`, preferredRole === 'admin' ? 'admin' : 'staff');
+                if (!username) return;
+
+                const password = prompt(`Enter Password for ${username}:`, username === 'admin' ? 'admin123' : 'staff123');
+                if (!password) return;
+
+                const res = window.QuickPrintStore.login(username, password);
+                if (res.success) {
+                    alert(`Welcome, ${res.user.fullName}!`);
+                    this.renderAuthBar();
+                } else {
+                    alert(res.message);
+                }
+            },
+
+            renderAuthBar() {
+                const container = document.getElementById('auth-status-container');
+                if (!container) return;
+
+                const user = window.QuickPrintStore.getCurrentUser();
+                if (user) {
+                    container.innerHTML = `
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-semibold text-slate-700 hidden sm:inline">
+                                ${user.fullName.split(' ')[0]} <span class="text-[10px] px-1.5 py-0.5 rounded font-bold bg-[#76ABAE]/15 text-[#466C6E] border border-[#76ABAE]/40">${user.role}</span>
+                            </span>
+                            <button type="button" onclick="QuickPrintStore.logout()" class="px-2.5 py-1 text-xs font-semibold rounded border border-slate-300 hover:bg-slate-100 text-slate-700">
+                                Logout
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    container.innerHTML = `
+                        <button type="button" onclick="NavigationController.promptLogin('staff')" class="px-3 py-1.5 text-xs font-bold rounded-lg border border-[#76ABAE] text-[#466C6E] hover:bg-[#76ABAE]/15 transition-all">
+                            Log in
+                        </button>
+                    `;
+                }
+            }
+        };
+
+        // Initialize All Modules on DOM load
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            NavigationController.init();
+            CustomerController.init();
+            StaffController.init();
+            AdminController.init();
+            CaseStudyController.init();
+            // Default open abstract in case study modal
+            CaseStudyController.showDocSection('abstract');
+        });
+    </script>
+</body>
+</html>

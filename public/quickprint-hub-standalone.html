@@ -1,0 +1,1772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QuickPrint Hub - Printing Shop Queue & Order Management System</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            theme: {
+              teal: '#309898',
+              amber: '#FF9F00',
+              orange: '#F4631E',
+              crimson: '#CB0404',
+              charcoal: '#242B33'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    }
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .ticket-paper {
+      position: relative;
+      background-color: #ffffff;
+      border-radius: 1rem;
+      box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.08);
+    }
+    .ticket-paper::before, .ticket-paper::after {
+      content: '';
+      position: absolute;
+      top: 55%;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background-color: #F8F9FA;
+      transform: translateY(-50%);
+    }
+    .ticket-paper::before { left: -10px; }
+    .ticket-paper::after { right: -10px; }
+    
+    .barcode-stripes {
+      height: 44px;
+      background: repeating-linear-gradient(
+        90deg,
+        #222831 0px,
+        #222831 2px,
+        transparent 2px,
+        transparent 4px,
+        #222831 4px,
+        #222831 7px,
+        transparent 7px,
+        transparent 9px,
+        #222831 9px,
+        #222831 10px,
+        transparent 10px,
+        transparent 13px,
+        #222831 13px,
+        #222831 16px,
+        transparent 16px,
+        transparent 17px,
+        #222831 17px,
+        #222831 21px,
+        transparent 21px,
+        transparent 24px
+      );
+      width: 100%;
+    }
+
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      #print-slip-modal-content, #print-slip-modal-content * {
+        visibility: visible;
+      }
+      #print-slip-modal-content {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body class="bg-[#F8F9FA] text-[#222831] antialiased selection:bg-[#F4631E] selection:text-white min-h-screen flex flex-col">
+
+  <!-- ==============================================================
+       TOP GLOBAL BANNER
+       ============================================================== -->
+  <div class="bg-[#242B33] text-white text-[11px] font-medium py-1.5 px-4 border-b border-white/10">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+      <div class="flex items-center gap-2">
+        <span class="flex items-center gap-1 text-[#FF9F00] font-bold">
+          <i data-lucide="sparkles" class="w-3.5 h-3.5 text-[#FF9F00]"></i> Student Plaza Commercial Complex
+        </span>
+        <span class="text-white/40 hidden sm:inline">•</span>
+        <span class="text-slate-300 hidden md:inline">Open Mon–Sat 8:00 AM – 7:00 PM</span>
+      </div>
+
+      <div class="flex items-center gap-3 font-mono">
+        <span class="flex items-center gap-1.5 text-white/80">
+          <span class="w-2 h-2 rounded-full bg-[#309898] animate-ping inline-block"></span>
+          Live Queue Load: <b id="top-bar-queue-load" class="text-[#FF9F00]">3</b>
+        </span>
+        <span>•</span>
+        <span class="flex items-center gap-1 text-emerald-400">
+          Ready for Handover: <b id="top-bar-ready-load">2</b>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==============================================================
+       HEADER NAVIGATION
+       ============================================================== -->
+  <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="min-h-16 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-2">
+        
+        <!-- Logo -->
+        <div class="flex items-center gap-3 cursor-pointer select-none" onclick="App.switchPortal('customer')">
+          <div class="w-10 h-10 shrink-0">
+            <svg viewBox="0 0 64 64" fill="none" class="w-full h-full drop-shadow-sm">
+              <defs>
+                <linearGradient id="p-teal" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse"><stop stop-color="#309898"/><stop offset="1" stop-color="#227272"/></linearGradient>
+                <linearGradient id="p-amber" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse"><stop stop-color="#FFB333"/><stop offset="1" stop-color="#FF9F00"/></linearGradient>
+                <linearGradient id="p-crimson" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse"><stop stop-color="#E61A1A"/><stop offset="1" stop-color="#CB0404"/></linearGradient>
+              </defs>
+              <rect x="2" y="2" width="60" height="60" rx="16" fill="#242B33"/>
+              <rect x="13" y="11" width="32" height="38" rx="5" fill="url(#p-teal)" transform="rotate(-9 29 30)"/>
+              <rect x="16" y="11" width="33" height="39" rx="5" fill="url(#p-amber)" opacity="0.9" transform="rotate(6 32 30)"/>
+              <rect x="17" y="12" width="32" height="40" rx="4" fill="#FFFFFF"/>
+              <rect x="22" y="19" width="18" height="2.5" rx="1.25" fill="#309898"/>
+              <rect x="22" y="24" width="22" height="2.5" rx="1.25" fill="#FF9F00"/>
+              <rect x="22" y="29" width="16" height="2.5" rx="1.25" fill="#F4631E"/>
+              <rect x="22" y="34" width="20" height="2.5" rx="1.25" fill="#CB0404"/>
+              <path d="M33 46L46 46C49 46 51 44 51 41L51 30L41 39L34 32L33 46Z" fill="url(#p-crimson)"/>
+              <polygon points="46,16 54,23 46,23" fill="#F4631E"/>
+              <circle cx="23" cy="43" r="2.2" fill="#F4631E"/>
+              <circle cx="28" cy="43" r="1.8" fill="#309898"/>
+            </svg>
+          </div>
+          <div class="flex flex-col">
+            <div class="font-extrabold text-xl tracking-tight leading-none text-[#242B33]">
+              QuickPrint<span class="text-[#F4631E]">Hub</span>
+              <span class="ml-1.5 px-1.5 py-0.2 text-[9px] font-mono font-bold uppercase rounded bg-[#FF9F00]/15 text-[#CB0404] border border-[#FF9F00]/40 hidden sm:inline-block">FastQueue</span>
+            </div>
+            <p class="text-[11px] font-medium text-slate-500 mt-1 flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-[#309898] inline-block animate-pulse"></span>
+              Queue & Print Order Management
+            </p>
+          </div>
+        </div>
+
+        <!-- Search input -->
+        <div class="hidden lg:flex flex-1 max-w-sm items-center gap-2 px-3.5 py-1.5 rounded-xl border border-slate-200 bg-slate-50 focus-within:border-[#309898] focus-within:bg-white focus-within:ring-2 focus-within:ring-[#309898]/20 transition-all">
+          <i data-lucide="search" class="w-4 h-4 text-slate-400"></i>
+          <input type="text" id="global-search-input" oninput="App.handleSearch(this.value)" placeholder="Search printing services & materials..." class="w-full text-xs text-slate-800 bg-transparent outline-none">
+        </div>
+
+        <!-- Portal Switcher Buttons -->
+        <nav class="flex items-center gap-1.5">
+          <button type="button" data-portal-btn="customer" onclick="App.switchPortal('customer')" class="px-3 py-1.5 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all bg-[#F4631E] text-white shadow-sm ring-2 ring-[#F4631E]/20">
+            <i data-lucide="globe" class="w-3.5 h-3.5"></i><span>Shop</span>
+          </button>
+          <button type="button" data-portal-btn="tv" onclick="App.switchPortal('tv')" class="px-3 py-1.5 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all text-slate-600 hover:bg-slate-100">
+            <i data-lucide="tv" class="w-3.5 h-3.5 text-[#309898]"></i><span class="hidden sm:inline">TV Lobby</span>
+          </button>
+          <button type="button" data-portal-btn="staff" onclick="App.switchPortal('staff')" class="px-3 py-1.5 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all text-slate-600 hover:bg-slate-100">
+            <i data-lucide="user-check" class="w-3.5 h-3.5"></i><span class="hidden sm:inline">Staff POS</span>
+          </button>
+          <button type="button" data-portal-btn="admin" onclick="App.switchPortal('admin')" class="px-3 py-1.5 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all text-slate-600 hover:bg-slate-100">
+            <i data-lucide="shield" class="w-3.5 h-3.5"></i><span class="hidden sm:inline">Admin</span>
+          </button>
+        </nav>
+
+        <!-- Auth Status Button -->
+        <div id="auth-status-bar" class="flex items-center gap-2 pl-2 border-l border-slate-200">
+          <button type="button" onclick="App.openLoginModal()" class="px-3 py-1.5 text-xs font-bold rounded-xl border border-[#309898] text-[#309898] hover:bg-[#309898]/10 flex items-center gap-1 transition-all">
+            <i data-lucide="log-in" class="w-3.5 h-3.5"></i><span>Log in</span>
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Customer Portal Sub Navigation -->
+      <div id="customer-sub-nav" class="hidden sm:flex items-center gap-6 border-t border-slate-100 py-2.5 text-xs font-medium text-slate-600">
+        <a href="#catalog-section" class="hover:text-[#F4631E] flex items-center gap-1"><span>Browse Services</span></a>
+        <a href="#tracker-section" class="hover:text-[#F4631E] flex items-center gap-1"><i data-lucide="clock" class="w-3.5 h-3.5 text-[#309898]"></i><span>Track My Order & Queue</span></a>
+        <a href="#order-form-section" class="hover:text-[#F4631E] flex items-center gap-1"><i data-lucide="printer" class="w-3.5 h-3.5 text-[#F4631E]"></i><span>Place New Print Order</span></a>
+        <span class="ml-auto text-[11px] text-slate-400">Ground Floor Student Plaza Commercial Complex</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==============================================================
+       PORTAL 1: CUSTOMER SHOP & CATALOG
+       ============================================================== -->
+  <main id="portal-customer" class="flex-grow space-y-12 pb-16">
+    
+    <!-- Hero Section -->
+    <section class="relative overflow-hidden bg-gradient-to-br from-[#242B33] via-[#1E232A] to-[#12161A] text-white py-12 lg:py-16 px-4 sm:px-6 lg:px-8 border-b border-white/10">
+      <div class="absolute top-0 right-10 w-96 h-96 bg-[#F4631E]/15 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="absolute bottom-0 left-10 w-80 h-80 bg-[#309898]/20 rounded-full blur-3xl pointer-events-none"></div>
+      
+      <div class="max-w-7xl mx-auto relative z-10 grid lg:grid-cols-12 gap-8 items-center">
+        <div class="lg:col-span-7 space-y-6">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/15 text-xs font-semibold backdrop-blur-sm">
+            <span class="w-2 h-2 rounded-full bg-[#FF9F00] animate-pulse"></span>
+            <span class="text-white/90">Official Print & Queue Management System</span>
+          </div>
+
+          <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight leading-[1.15]">
+            We take care of all your <br />
+            <span class="text-transparent bg-clip-text bg-gradient-to-r from-[#FF9F00] via-[#F4631E] to-[#CB0404]">
+              printing & copy needs.
+            </span>
+          </h1>
+
+          <p className="text-slate-300 text-sm sm:text-base leading-relaxed max-w-xl">
+            Submit your document thesis, laboratory photos, die-cut vinyl stickers, and marketing collateral online. Track live queue tickets from pending, active printing, to ready for pickup.
+          </p>
+
+          <div class="flex flex-wrap items-center gap-3 pt-2">
+            <a href="#catalog-section" class="px-6 py-3 rounded-xl bg-[#F4631E] hover:bg-[#E64A19] text-white font-bold text-sm shadow-lg shadow-[#F4631E]/25 transition-all flex items-center gap-2">
+              <span>Explore Services</span> <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            </a>
+            <a href="#order-form-section" class="px-6 py-3 rounded-xl bg-[#309898] hover:bg-[#287D7D] text-white font-bold text-sm shadow-md transition-all flex items-center gap-2">
+              <i data-lucide="printer" class="w-4 h-4"></i><span>Place Order Online</span>
+            </a>
+            <a href="#tracker-section" class="px-5 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-sm backdrop-blur-sm transition-all flex items-center gap-2">
+              <i data-lucide="clock" class="w-4 h-4 text-[#FF9F00]"></i><span>Track Claim Ticket</span>
+            </a>
+          </div>
+
+          <div class="pt-4 grid grid-cols-3 gap-3 border-t border-white/10 text-xs">
+            <div><span class="font-extrabold text-lg text-white font-mono block">99.4%</span><span class="text-slate-400 text-[11px]">On-Time Pickup</span></div>
+            <div><span class="font-extrabold text-lg text-[#FF9F00] font-mono block">14,200+</span><span class="text-slate-400 text-[11px]">Jobs Completed</span></div>
+            <div><span class="font-extrabold text-lg text-emerald-400 font-mono block">★ 4.9 / 5</span><span class="text-slate-400 text-[11px]">Student & Pro Rating</span></div>
+          </div>
+        </div>
+
+        <div class="lg:col-span-5 relative hidden lg:block">
+          <div class="relative mx-auto max-w-md">
+            <div class="rounded-2xl overflow-hidden shadow-2xl border border-white/20 transform -rotate-3 hover:rotate-0 transition-transform duration-500 bg-white">
+              <img src="https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=700&q=80" alt="Thesis Hardbound Book" class="w-full h-48 object-cover">
+              <div class="p-3 bg-white flex items-center justify-between text-xs">
+                <div><span class="font-bold text-slate-800 block">Thesis & Documents</span><span class="text-slate-500 text-[11px]">Hardbound Gold Foil & Spiral</span></div>
+                <span class="px-2 py-0.5 rounded font-mono font-bold bg-[#F4631E]/10 text-[#F4631E]">From ₱2.00</span>
+              </div>
+            </div>
+            <div class="absolute -bottom-6 -right-4 w-60 rounded-2xl overflow-hidden shadow-2xl border-2 border-white transform rotate-3 hover:rotate-0 transition-transform duration-500 bg-white">
+              <img src="https://images.unsplash.com/photo-1589939705384-5185137a7f0f?auto=format&fit=crop&w=500&q=80" alt="Vinyl Stickers" class="w-full h-28 object-cover">
+              <div class="p-2.5 bg-white text-xs">
+                <span class="font-bold text-slate-800 block">Die-Cut Vinyl Stickers</span>
+                <span class="text-[#309898] text-[10px] font-bold">Waterproof & UV Coated</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Track Order Section -->
+    <section id="tracker-section" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 sm:p-8">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-100">
+          <div>
+            <div class="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#309898] mb-1">
+              <i data-lucide="clock" class="w-3.5 h-3.5"></i> Live Queue Tracker
+            </div>
+            <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Live Order & Queue Monitor</h2>
+            <p class="text-xs sm:text-sm text-slate-500 mt-1">
+              Enter your Queue Number (e.g. <span class="font-mono text-[#F4631E] font-bold">Q-101</span>) or Tracking ID (<span class="font-mono text-[#309898] font-bold">QP-2026-101</span>).
+            </p>
+          </div>
+          <div class="flex items-center gap-2 flex-wrap text-xs">
+            <span class="text-slate-400 font-medium">Quick Demo:</span>
+            <button type="button" onclick="App.trackOrder('Q-101')" class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono font-bold hover:bg-emerald-100">Q-101 (Ready)</button>
+            <button type="button" onclick="App.trackOrder('Q-102')" class="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 font-mono font-bold hover:bg-blue-100">Q-102 (Printing)</button>
+            <button type="button" onclick="App.trackOrder('Q-103')" class="px-2.5 py-1 rounded-lg bg-[#FF9F00]/10 text-amber-800 border border-[#FF9F00]/30 font-mono font-bold hover:bg-[#FF9F00]/20">Q-103 (Pending)</button>
+          </div>
+        </div>
+
+        <form onsubmit="App.handleTrackSubmit(event)" class="mt-6 flex flex-col sm:flex-row gap-3 max-w-2xl">
+          <div class="relative flex-1">
+            <i data-lucide="search" class="w-5 h-5 text-slate-400 absolute left-3.5 top-3"></i>
+            <input type="text" id="tracker-input" placeholder="Enter Queue No. (e.g. Q-101) or Tracking Code..." class="w-full pl-11 pr-4 py-2.5 text-sm rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#309898] font-mono uppercase" required>
+          </div>
+          <button type="submit" class="px-6 py-2.5 bg-[#309898] hover:bg-[#287D7D] text-white font-bold text-sm rounded-xl shadow-sm transition-all flex items-center justify-center gap-2">
+            <span>Track Status</span>
+          </button>
+        </form>
+
+        <div id="tracker-result-area" class="mt-6"></div>
+      </div>
+    </section>
+
+    <!-- Services Catalog with Realistic Pictures & Intuitive Filters -->
+    <section id="catalog-section" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+      <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
+        <div>
+          <div class="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#F4631E] mb-1">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Full Service Printing Studio
+          </div>
+          <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Printing Services & Realistic Showcase</h2>
+          <p class="text-xs sm:text-sm text-slate-500 mt-1 max-w-xl">
+            Real photographic samples of our papers, finishes, bindings, and turnaround options. Filter intuitively below:
+          </p>
+        </div>
+
+        <!-- View mode -->
+        <div class="flex items-center gap-2 self-start md:self-auto">
+          <span class="text-xs text-slate-400 font-medium">View:</span>
+          <button type="button" id="view-mode-grid" onclick="App.setViewMode('grid')" class="p-2 rounded-xl text-xs font-bold bg-[#242B33] text-white shadow-sm" title="Showcase Grid"><i data-lucide="layers" class="w-4 h-4"></i></button>
+          <button type="button" id="view-mode-compact" onclick="App.setViewMode('compact')" class="p-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200" title="Compact Table"><i data-lucide="file-text" class="w-4 h-4"></i></button>
+        </div>
+      </div>
+
+      <!-- Category Filter Pills -->
+      <div id="category-pills-bar" class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <!-- Secondary Multi-Filter Bar -->
+      <div class="mt-4 p-4 bg-white rounded-2xl border border-slate-200 shadow-sm grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-center">
+        <div class="lg:col-span-4 relative">
+          <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
+          <input type="text" id="catalog-search-filter" oninput="App.applyFilters()" placeholder="Filter by name, finish, or paper type..." class="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 outline-none focus:ring-2 focus:ring-[#309898]">
+        </div>
+
+        <div class="lg:col-span-3">
+          <select id="filter-turnaround" onchange="App.applyFilters()" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 text-slate-700 outline-none focus:ring-2 focus:ring-[#309898]">
+            <option value="all">Turnaround: Any speed</option>
+            <option value="rush">⚡ 1-2 Hours Express Rush</option>
+            <option value="sameday">Same Day Pickup</option>
+            <option value="nextday">Next Day (24 hrs)</option>
+          </select>
+        </div>
+
+        <div class="lg:col-span-2">
+          <select id="filter-budget" onchange="App.applyFilters()" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 text-slate-700 outline-none focus:ring-2 focus:ring-[#309898]">
+            <option value="all">Budget: All</option>
+            <option value="under50">Under ₱50</option>
+            <option value="50to150">₱50 – ₱150</option>
+            <option value="over150">₱150 & up</option>
+          </select>
+        </div>
+
+        <div class="lg:col-span-3 flex items-center gap-2">
+          <select id="filter-sort" onchange="App.applyFilters()" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 text-slate-700 outline-none focus:ring-2 focus:ring-[#309898]">
+            <option value="popular">Sort: Most Popular</option>
+            <option value="rating">Sort: Highest Rated</option>
+            <option value="price-asc">Sort: Price (Low to High)</option>
+            <option value="price-desc">Sort: Price (High to Low)</option>
+            <option value="turnaround">Sort: Fastest Turnaround</option>
+          </select>
+          <button type="button" onclick="App.resetFilters()" class="p-2 rounded-xl text-slate-500 hover:text-red-600 hover:bg-red-50 text-xs shrink-0" title="Reset all filters"><i data-lucide="rotate-ccw" class="w-4 h-4"></i></button>
+        </div>
+      </div>
+
+      <!-- Services Cards Grid Area -->
+      <div id="services-display-area" class="mt-6"></div>
+    </section>
+
+    <!-- Order Placement & Cost Calculator -->
+    <section id="order-form-section" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        
+        <!-- Left: Form -->
+        <div class="lg:col-span-7 bg-white rounded-3xl border border-slate-200/90 shadow-sm p-6 sm:p-8">
+          <div class="mb-6 pb-4 border-b border-slate-100">
+            <div class="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#309898] mb-1">
+              <i data-lucide="printer" class="w-3.5 h-3.5"></i> Online Claim Ticket Submission
+            </div>
+            <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Submit Print Order & Specifications</h2>
+            <p class="text-xs text-slate-500 mt-1">Configure your printing job below. You will be issued a Queue Claim Number immediately.</p>
+          </div>
+
+          <form id="online-order-form" onsubmit="App.handleOrderSubmit(event)" class="space-y-4 text-xs">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block font-bold text-slate-700 uppercase mb-1">Full Name *</label>
+                <input type="text" id="order-name" placeholder="e.g. Maria Santos" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#309898]" required>
+              </div>
+              <div>
+                <label class="block font-bold text-slate-700 uppercase mb-1">Mobile Contact No. *</label>
+                <input type="text" id="order-contact" placeholder="0917-123-4567" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#309898]" required>
+              </div>
+            </div>
+
+            <div>
+              <label class="block font-bold text-slate-700 uppercase mb-1">Select Printing Service *</label>
+              <select id="order-service-select" onchange="App.recalculatePrice()" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white font-bold text-slate-800" required>
+                <!-- Populated dynamically -->
+              </select>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label class="block font-bold text-slate-700 uppercase mb-1">Paper Size</label>
+                <select id="order-paper-size" onchange="App.recalculatePrice()" class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white">
+                  <option value="short">Short (8.5 × 11")</option>
+                  <option value="a4" selected>A4 (8.27 × 11.69") [+₱0.50]</option>
+                  <option value="long">Long (8.5 × 13") [+₱1.00]</option>
+                  <option value="a3">A3 Tabloid (11.7 × 16.5") [+₱8.00]</option>
+                </select>
+              </div>
+              <div>
+                <label class="block font-bold text-slate-700 uppercase mb-1">Paper Material</label>
+                <select id="order-paper-type" onchange="App.recalculatePrice()" class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white">
+                  <option value="regular70" selected>Standard 70gsm Copier</option>
+                  <option value="book80">80gsm Book Paper [+₱1.00]</option>
+                  <option value="glossyPhoto">Glossy Photo 230gsm [+₱12.00]</option>
+                  <option value="matteCardstock">Matte Cardstock 250gsm [+₱10.00]</option>
+                  <option value="stickerVinyl">Vinyl Sticker Sheet [+₱15.00]</option>
+                </select>
+              </div>
+              <div>
+                <label class="block font-bold text-slate-700 uppercase mb-1">Print Layout</label>
+                <select id="order-print-side" onchange="App.recalculatePrice()" class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white">
+                  <option value="single" selected>Single-sided (1 page/sheet)</option>
+                  <option value="double">Back-to-Back (Duplex)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label class="block font-bold text-slate-700 uppercase mb-1">Pages Count</label>
+                <input type="number" id="order-page-count" value="10" min="1" max="1000" oninput="App.recalculatePrice()" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono" required>
+              </div>
+              <div>
+                <label class="block font-bold text-slate-700 uppercase mb-1">Copies / Sets</label>
+                <input type="number" id="order-copies-count" value="1" min="1" max="100" oninput="App.recalculatePrice()" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono" required>
+              </div>
+              <div>
+                <label class="block font-bold text-slate-700 uppercase mb-1">Binding / Finishing</label>
+                <select id="order-binding" onchange="App.recalculatePrice()" class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white">
+                  <option value="none" selected>No Binding</option>
+                  <option value="staple">Corner Staple (Free)</option>
+                  <option value="ring">Spiral Coil Bind (+₱55.00)</option>
+                  <option value="soft">Soft Bind with PVC (+₱75.00)</option>
+                  <option value="hard">Hardbound Gold Foil (+₱350.00)</option>
+                  <option value="laminate">Laminate Sheet (+₱25.00)</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label class="block font-bold text-slate-700 uppercase mb-1">Special Instructions</label>
+              <textarea id="order-notes" rows="2" placeholder="e.g. Please print page 1 in colored cover, stapled on top-left..." class="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-[#309898]"></textarea>
+            </div>
+
+            <button type="submit" class="w-full py-3.5 bg-[#F4631E] hover:bg-[#E64A19] text-white font-extrabold text-sm rounded-xl shadow-lg shadow-[#F4631E]/25 transition-all flex items-center justify-center gap-2">
+              <i data-lucide="check-circle-2" class="w-4 h-4"></i><span>Submit Order & Generate Queue Ticket</span>
+            </button>
+          </form>
+        </div>
+
+        <!-- Right: Reactive Cost Calculator -->
+        <div class="lg:col-span-5 sticky top-24">
+          <div class="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-6 sm:p-7 space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-[#309898]/10 text-[#309898] flex items-center justify-center"><i data-lucide="sliders-horizontal" class="w-4 h-4"></i></div>
+                <div><h3 class="font-extrabold text-slate-900 text-sm">Instant Cost Calculator</h3><span class="text-[11px] text-slate-400">Live system rate matrix</span></div>
+              </div>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">Active</span>
+            </div>
+
+            <div id="cost-breakdown-area" class="space-y-2 text-xs text-slate-600">
+              <!-- Dynamically populated -->
+            </div>
+
+            <div class="pt-4 border-t border-slate-200">
+              <div class="flex justify-between items-baseline">
+                <div><span class="text-xs uppercase font-extrabold text-slate-400 block tracking-wider">Total Payable</span><span class="text-[11px] text-slate-400">Inclusive of VAT</span></div>
+                <span id="cost-total-amount" class="text-3xl font-black font-mono text-[#F4631E]">₱0.00</span>
+              </div>
+            </div>
+
+            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-1.5">
+              <div class="font-bold text-slate-800 flex items-center gap-1.5"><i data-lucide="credit-card" class="w-4 h-4 text-[#309898]"></i> Payment & Counter Pickup</div>
+              <p>• Payments are settled at Counter 1 upon order arrival or pickup.</p>
+              <p>• Present your assigned <b>Queue Number</b> to claim printed copies.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==============================================================
+       PORTAL 2: TV LOBBY DISPLAY
+       ============================================================== -->
+  <main id="portal-tv" class="hidden flex-grow bg-[#181C21] text-white p-4 sm:p-6 lg:p-8 flex flex-col justify-between">
+    <div class="flex flex-wrap items-center justify-between pb-6 border-b border-white/10 gap-4">
+      <div class="flex items-center gap-4">
+        <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#F4631E] to-[#CB0404] flex items-center justify-center text-white shadow-xl">
+          <i data-lucide="printer" class="w-7 h-7"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-2xl sm:text-3xl font-black tracking-tight text-white">QuickPrint <span class="text-[#F4631E]">Hub</span></h1>
+            <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#309898]/20 text-[#309898] border border-[#309898]/40">LOBBY TV</span>
+          </div>
+          <p class="text-xs text-slate-400 mt-0.5">Live Printing Queue Display • Student Plaza Commercial Complex</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button type="button" onclick="App.toggleChime()" id="tv-chime-toggle" class="px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 bg-[#309898] text-white">
+          <i data-lucide="volume-2" class="w-4 h-4"></i><span>Chime: ON</span>
+        </button>
+        <button type="button" onclick="App.playChime('ready')" class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold">🔊 Sound Test</button>
+        <div class="text-right pl-3 border-l border-white/10">
+          <div id="tv-clock" class="text-2xl sm:text-3xl font-black font-mono tracking-wider text-[#FF9F00]">--:--:--</div>
+          <div id="tv-date" class="text-[11px] text-slate-400">---</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3-Column Board -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 my-8 flex-grow">
+      <!-- Ready -->
+      <div class="lg:col-span-5 flex flex-col bg-white/5 rounded-3xl p-5 border border-emerald-500/30">
+        <div class="flex items-center justify-between pb-4 border-b border-white/10 mb-4">
+          <div class="flex items-center gap-2">
+            <span class="w-3.5 h-3.5 rounded-full bg-emerald-500 animate-ping"></span>
+            <h2 class="text-xl font-black text-emerald-400 uppercase tracking-wider">READY FOR PICKUP</h2>
+          </div>
+          <span class="text-xs font-bold text-slate-300 bg-emerald-500/20 px-2.5 py-1 rounded-lg">Counter 1</span>
+        </div>
+        <div id="tv-ready-column" class="space-y-3 flex-grow overflow-y-auto max-h-[500px]"></div>
+      </div>
+
+      <!-- Printing -->
+      <div class="lg:col-span-4 flex flex-col bg-white/5 rounded-3xl p-5 border border-[#309898]/30">
+        <div class="flex items-center justify-between pb-4 border-b border-white/10 mb-4">
+          <div class="flex items-center gap-2">
+            <i data-lucide="printer" class="w-5 h-5 text-[#309898] animate-bounce"></i>
+            <h2 class="text-lg font-black text-[#309898] uppercase tracking-wider">NOW PRINTING</h2>
+          </div>
+          <span class="text-xs text-slate-400">In Progress</span>
+        </div>
+        <div id="tv-processing-column" class="space-y-3 flex-grow overflow-y-auto max-h-[500px]"></div>
+      </div>
+
+      <!-- Waiting -->
+      <div class="lg:col-span-3 flex flex-col bg-white/5 rounded-3xl p-5 border border-white/10">
+        <div class="flex items-center justify-between pb-4 border-b border-white/10 mb-4">
+          <div class="flex items-center gap-2">
+            <i data-lucide="clock" class="w-4 h-4 text-slate-400"></i>
+            <h2 class="text-sm font-bold text-slate-300 uppercase tracking-wider">NEXT IN LINE</h2>
+          </div>
+          <span id="tv-waiting-count" class="text-xs text-slate-500">0 waiting</span>
+        </div>
+        <div id="tv-pending-column" class="space-y-2 flex-grow overflow-y-auto max-h-[500px]"></div>
+      </div>
+    </div>
+
+    <div class="pt-4 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 gap-3">
+      <div>Active Queue Load: <b id="tv-footer-load" class="text-[#FF9F00] font-mono">0</b> orders • Pickup: <b class="text-white">Counter 1 & 2</b></div>
+      <div>Operating Hours: Mon - Sat: 8:00 AM - 7:00 PM • Ground Floor Student Plaza Complex</div>
+    </div>
+  </main>
+
+  <!-- ==============================================================
+       PORTAL 3: STAFF POS CONSOLE
+       ============================================================== -->
+  <main id="portal-staff" class="hidden flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-6">
+    <div class="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-slate-200 gap-4">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="px-2.5 py-0.5 rounded-full bg-[#309898]/15 text-[#309898] font-bold text-xs uppercase tracking-wide">STAFF POS CONSOLE</span>
+          <span class="text-xs text-slate-400">• Flowchart Operational Module</span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-black text-slate-900 mt-1">Order & Queue Management Console</h1>
+      </div>
+      <div class="flex items-center gap-1.5 flex-wrap">
+        <button type="button" onclick="App.setStaffTab('queue')" data-staff-nav="queue" class="px-3 py-2 text-xs font-bold rounded-xl bg-[#309898] text-white shadow-sm flex items-center gap-1"><i data-lucide="list" class="w-3.5 h-3.5"></i> Queue List</button>
+        <button type="button" onclick="App.setStaffTab('pos')" data-staff-nav="pos" class="px-3 py-2 text-xs font-bold rounded-xl bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 flex items-center gap-1"><i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> Create POS Order</button>
+        <button type="button" onclick="App.setStaffTab('cashier')" data-staff-nav="cashier" class="px-3 py-2 text-xs font-bold rounded-xl bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 flex items-center gap-1"><i data-lucide="credit-card" class="w-3.5 h-3.5"></i> Cashiering</button>
+        <button type="button" onclick="App.setStaffTab('release')" data-staff-nav="release" class="px-3 py-2 text-xs font-bold rounded-xl bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 flex items-center gap-1"><i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i> Release Order</button>
+      </div>
+    </div>
+
+    <!-- Staff Sub Tab 1: Queue -->
+    <div id="staff-tab-queue" class="space-y-4">
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div class="flex items-center gap-1.5">
+          <button onclick="App.setStaffQueueFilter('ALL')" data-q-filter="ALL" class="px-3 py-1.5 text-xs font-bold rounded-xl bg-[#309898] text-white">ALL</button>
+          <button onclick="App.setStaffQueueFilter('PENDING')" data-q-filter="PENDING" class="px-3 py-1.5 text-xs font-bold rounded-xl bg-slate-100 text-slate-600">PENDING</button>
+          <button onclick="App.setStaffQueueFilter('PROCESSING')" data-q-filter="PROCESSING" class="px-3 py-1.5 text-xs font-bold rounded-xl bg-slate-100 text-slate-600">PROCESSING</button>
+          <button onclick="App.setStaffQueueFilter('READY')" data-q-filter="READY" class="px-3 py-1.5 text-xs font-bold rounded-xl bg-slate-100 text-slate-600">READY</button>
+        </div>
+        <input type="text" id="staff-search-queue" oninput="App.renderStaffQueue()" placeholder="Search queue #, customer..." class="w-full sm:w-72 px-3 py-1.5 text-xs rounded-xl border border-slate-200">
+      </div>
+      <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase text-[11px]">
+                <th class="py-3 px-4">Queue #</th>
+                <th class="py-3 px-4">Customer</th>
+                <th class="py-3 px-4">Service & Specs</th>
+                <th class="py-3 px-4">Status</th>
+                <th class="py-3 px-4">Payment</th>
+                <th class="py-3 px-4 text-right">Workflow Action</th>
+              </tr>
+            </thead>
+            <tbody id="staff-queue-tbody" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Staff Sub Tab 2: POS -->
+    <div id="staff-tab-pos" class="hidden bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm max-w-4xl mx-auto space-y-4">
+      <h2 class="text-xl font-bold text-slate-900">Point-of-Sale: Walk-in / Phone Order</h2>
+      <form onsubmit="App.handleStaffPOSSubmit(event)" class="space-y-4 text-xs">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div><label class="block font-bold text-slate-700 mb-1">Customer Name *</label><input type="text" id="pos-name" placeholder="Full name" class="w-full px-3 py-2 rounded-xl border border-slate-300" required></div>
+          <div><label class="block font-bold text-slate-700 mb-1">Contact No. *</label><input type="text" id="pos-contact" placeholder="09XX-XXX-XXXX" class="w-full px-3 py-2 rounded-xl border border-slate-300" required></div>
+        </div>
+        <div><label class="block font-bold text-slate-700 mb-1">Service Type *</label><select id="pos-service" class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white font-medium"></select></div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div><label class="block font-bold text-slate-700 mb-1">Paper Size</label><select id="pos-size" class="w-full px-2 py-1.5 rounded-lg border border-slate-300 bg-white"><option value="short">Short</option><option value="a4" selected>A4</option><option value="long">Long</option><option value="a3">A3</option></select></div>
+          <div><label class="block font-bold text-slate-700 mb-1">Paper Material</label><select id="pos-type" class="w-full px-2 py-1.5 rounded-lg border border-slate-300 bg-white"><option value="regular70" selected>70gsm Copier</option><option value="book80">80gsm Book</option><option value="glossyPhoto">Glossy Photo</option><option value="matteCardstock">Cardstock</option><option value="stickerVinyl">Vinyl</option></select></div>
+          <div><label class="block font-bold text-slate-700 mb-1">Layout</label><select id="pos-side" class="w-full px-2 py-1.5 rounded-lg border border-slate-300 bg-white"><option value="single">Single</option><option value="double">Double</option></select></div>
+          <div><label class="block font-bold text-slate-700 mb-1">Binding</label><select id="pos-binding" class="w-full px-2 py-1.5 rounded-lg border border-slate-300 bg-white"><option value="none">None</option><option value="staple">Staple</option><option value="ring">Spiral</option><option value="soft">Soft Bind</option><option value="hard">Hardbound</option><option value="laminate">Laminate</option></select></div>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div><label class="block font-bold text-slate-700 mb-1">Pages</label><input type="number" id="pos-pages" value="1" min="1" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 font-mono"></div>
+          <div><label class="block font-bold text-slate-700 mb-1">Copies</label><input type="number" id="pos-copies" value="1" min="1" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 font-mono"></div>
+          <div><label class="block font-bold text-slate-700 mb-1">Deposit (₱)</label><input type="number" id="pos-deposit" value="0" min="0" step="0.5" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 font-mono"></div>
+          <div><label class="block font-bold text-slate-700 mb-1">Payment Method</label><select id="pos-paymethod" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white"><option value="Cash">Cash</option><option value="GCash">GCash</option><option value="Maya">Maya</option></select></div>
+        </div>
+        <button type="submit" class="w-full py-3 bg-[#309898] hover:bg-[#287D7D] text-white font-bold rounded-xl shadow-md flex items-center justify-center gap-2">
+          <i data-lucide="check-circle-2" class="w-4 h-4"></i><span>Save POS Order & Assign Queue Ticket</span>
+        </button>
+      </form>
+    </div>
+
+    <!-- Staff Sub Tab 3: Cashiering -->
+    <div id="staff-tab-cashier" class="hidden space-y-4">
+      <div class="flex justify-between items-center"><h3 class="font-bold text-slate-900 text-base">Orders Awaiting Payment</h3></div>
+      <div id="staff-cashier-cards-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    </div>
+
+    <!-- Staff Sub Tab 4: Release Handover -->
+    <div id="staff-tab-release" class="hidden space-y-4">
+      <div class="flex justify-between items-center"><h3 class="font-bold text-slate-900 text-base">Orders Ready for Handover</h3><span class="text-xs text-slate-500">Payment must be settled before completion.</span></div>
+      <div id="staff-release-cards-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    </div>
+  </main>
+
+  <!-- ==============================================================
+       PORTAL 4: ADMIN HUB
+       ============================================================== -->
+  <main id="portal-admin" class="hidden flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-6">
+    <div class="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-slate-200 gap-4">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="px-2.5 py-0.5 rounded-full bg-[#CB0404]/15 text-[#CB0404] font-bold text-xs uppercase tracking-wide">ADMINISTRATOR HUB</span>
+          <span class="text-xs text-slate-400">• Flowchart Management & Auditing</span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-black text-slate-900 mt-1">System & Service Management Hub</h1>
+      </div>
+      <div class="flex items-center gap-1.5 flex-wrap">
+        <button type="button" onclick="App.setAdminTab('analytics')" data-admin-nav="analytics" class="px-3 py-2 text-xs font-bold rounded-xl bg-[#CB0404] text-white shadow-sm flex items-center gap-1"><i data-lucide="bar-chart-3" class="w-3.5 h-3.5"></i> Analytics</button>
+        <button type="button" onclick="App.setAdminTab('services')" data-admin-nav="services" class="px-3 py-2 text-xs font-bold rounded-xl bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 flex items-center gap-1"><i data-lucide="printer" class="w-3.5 h-3.5"></i> Services</button>
+        <button type="button" onclick="App.setAdminTab('pricing')" data-admin-nav="pricing" class="px-3 py-2 text-xs font-bold rounded-xl bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 flex items-center gap-1"><i data-lucide="tags" class="w-3.5 h-3.5"></i> Price Matrix</button>
+        <button type="button" onclick="App.setAdminTab('orders')" data-admin-nav="orders" class="px-3 py-2 text-xs font-bold rounded-xl bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 flex items-center gap-1"><i data-lucide="database" class="w-3.5 h-3.5"></i> Orders Audit</button>
+      </div>
+    </div>
+
+    <!-- Admin Tab: Analytics -->
+    <div id="admin-tab-analytics" class="space-y-6">
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm"><span class="text-xs text-slate-400 font-bold block uppercase">Gross Sales Collected</span><span id="admin-stat-revenue" class="text-3xl font-black text-[#CB0404] font-mono mt-1 block">₱0.00</span></div>
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm"><span class="text-xs text-slate-400 font-bold block uppercase">Total Jobs Recorded</span><span id="admin-stat-jobs" class="text-3xl font-black text-slate-900 mt-1 block">0</span></div>
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm"><span class="text-xs text-slate-400 font-bold block uppercase">Active Queue Load</span><span id="admin-stat-queue" class="text-3xl font-black text-[#309898] mt-1 block">0</span></div>
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm"><span class="text-xs text-slate-400 font-bold block uppercase">Handover Rate</span><span id="admin-stat-rate" class="text-3xl font-black text-emerald-600 mt-1 block">100%</span></div>
+      </div>
+    </div>
+
+    <!-- Admin Tab: Services Catalog -->
+    <div id="admin-tab-services" class="hidden space-y-4">
+      <div class="flex justify-between items-center"><h3 class="font-bold text-slate-900 text-base">Printing Service Management</h3></div>
+      <div id="admin-services-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    </div>
+
+    <!-- Admin Tab: Pricing Matrix -->
+    <div id="admin-tab-pricing" class="hidden bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm max-w-4xl mx-auto space-y-4">
+      <h3 class="text-lg font-bold text-slate-900">Price Matrix Management</h3>
+      <p class="text-xs text-slate-500">Live paper & binding surcharges configured across all instant calculators.</p>
+      <div class="p-4 bg-slate-50 rounded-2xl text-xs space-y-2">
+        <div class="flex justify-between"><span>A4 Surcharge:</span><b>+₱0.50 / sheet</b></div>
+        <div class="flex justify-between"><span>Long/Legal Surcharge:</span><b>+₱1.00 / sheet</b></div>
+        <div class="flex justify-between"><span>A3 Tabloid Surcharge:</span><b>+₱8.00 / sheet</b></div>
+        <div class="flex justify-between"><span>Glossy Photo Stock:</span><b>+₱12.00 / sheet</b></div>
+        <div class="flex justify-between"><span>Spiral Coil Binding:</span><b>+₱55.00 / set</b></div>
+        <div class="flex justify-between"><span>Hardbound Gold Foil:</span><b>+₱350.00 / book</b></div>
+      </div>
+    </div>
+
+    <!-- Admin Tab: Orders Master Audit -->
+    <div id="admin-tab-orders" class="hidden space-y-4">
+      <div class="flex justify-between items-center">
+        <h3 class="font-bold text-slate-900 text-base">Master Orders Audit</h3>
+        <button onclick="App.exportCSV()" class="px-3.5 py-1.5 bg-emerald-600 text-white font-bold text-xs rounded-xl flex items-center gap-1"><i data-lucide="download" class="w-3.5 h-3.5"></i> Export CSV</button>
+      </div>
+      <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead><tr class="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase text-[11px]"><th class="py-2.5 px-3">Queue #</th><th class="py-2.5 px-3">Customer</th><th class="py-2.5 px-3">Service</th><th class="py-2.5 px-3">Status</th><th class="py-2.5 px-3">Total</th><th class="py-2.5 px-3">Paid</th></tr></thead>
+          <tbody id="admin-orders-tbody" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- ==============================================================
+       MODALS: CLAIM SLIP, QUICK VIEW, LOGIN
+       ============================================================== -->
+  
+  <!-- Printable Claim Slip Modal -->
+  <div id="print-ticket-modal" class="hidden fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl relative border border-slate-200 text-center font-mono">
+      <button onclick="document.getElementById('print-ticket-modal').classList.add('hidden')" class="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-slate-700">✕</button>
+      <div id="print-slip-modal-content" class="ticket-paper p-5 bg-white border border-slate-200">
+        <h2 class="text-base font-extrabold font-sans text-slate-900">QuickPrint Hub</h2>
+        <p class="text-[10px] text-slate-500 font-sans">Student Plaza Commercial Complex, Ground Floor</p>
+        <div id="print-slip-details" class="text-left text-xs space-y-1 text-slate-700 py-3"></div>
+        <div class="my-3 py-3 border-y-2 border-slate-900 bg-slate-50">
+          <span class="text-[10px] font-sans font-bold uppercase tracking-widest text-slate-500 block">YOUR QUEUE NUMBER</span>
+          <div id="print-slip-queue" class="text-5xl font-black text-[#F4631E] tracking-wider my-1">Q-101</div>
+          <span class="text-[10px] font-sans font-bold text-slate-600">PLEASE WAIT FOR NUMBER AT COUNTER 1</span>
+        </div>
+        <div class="barcode-stripes mt-3"></div>
+      </div>
+      <div class="mt-4 flex gap-2">
+        <button onclick="window.print()" class="flex-1 py-2.5 bg-[#242B33] hover:bg-black text-white font-bold text-xs rounded-xl shadow-sm flex items-center justify-center gap-1.5"><i data-lucide="printer" class="w-4 h-4"></i> Print Slip</button>
+        <button onclick="document.getElementById('print-ticket-modal').classList.add('hidden')" class="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-bold text-xs">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick View Modal -->
+  <div id="quick-view-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+      <button onclick="document.getElementById('quick-view-modal').classList.add('hidden')" class="absolute top-4 right-4 p-1 text-slate-400 hover:text-slate-700">✕</button>
+      <div id="quick-view-content" class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start"></div>
+    </div>
+  </div>
+
+  <!-- Login Modal -->
+  <div id="login-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl space-y-3 text-xs">
+      <div class="flex justify-between items-center pb-2 border-b border-slate-100">
+        <h3 class="font-extrabold text-sm text-slate-900">Console Authentication</h3>
+        <button onclick="document.getElementById('login-modal').classList.add('hidden')">✕</button>
+      </div>
+      <form onsubmit="App.handleLogin(event)" class="space-y-3">
+        <div><label class="block font-bold text-slate-700 mb-1">Username</label><input type="text" id="login-username" value="staff" class="w-full px-3 py-2 rounded-xl border border-slate-300" required></div>
+        <div><label class="block font-bold text-slate-700 mb-1">Password</label><input type="password" id="login-password" value="staff123" class="w-full px-3 py-2 rounded-xl border border-slate-300" required></div>
+        <div class="p-3 bg-slate-50 rounded-xl text-[11px] font-mono text-slate-600">Demo logins: <b>staff</b> or <b>admin</b></div>
+        <button type="submit" class="w-full py-2.5 bg-[#F4631E] text-white font-bold rounded-xl shadow-sm">Sign In</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Cashier Payment Modal -->
+  <div id="cashier-pay-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl space-y-3 text-xs">
+      <div class="flex justify-between items-center pb-2 border-b border-slate-100">
+        <h3 class="font-extrabold text-sm text-slate-900">Collect Payment</h3>
+        <button onclick="document.getElementById('cashier-pay-modal').classList.add('hidden')">✕</button>
+      </div>
+      <form onsubmit="App.handleCashierPaymentSubmit(event)" class="space-y-3">
+        <div id="cashier-pay-summary" class="p-3 bg-slate-50 rounded-xl text-xs space-y-1"></div>
+        <div><label class="block font-bold text-slate-700 mb-1">Payment Amount (₱) *</label><input type="number" id="cashier-pay-amount" step="0.5" class="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold text-base text-[#309898]" required></div>
+        <div><label class="block font-bold text-slate-700 mb-1">Payment Method</label><select id="cashier-pay-method" class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white"><option value="Cash">Cash</option><option value="GCash">GCash</option><option value="Maya">Maya</option></select></div>
+        <button type="submit" class="w-full py-2.5 bg-emerald-600 text-white font-bold rounded-xl shadow-sm">Confirm Payment</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="bg-[#242B33] text-white/70 text-xs py-8 border-t border-white/10 mt-auto">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="font-bold text-slate-200">QuickPrint Hub • Printing Shop Queue & Order Management System</div>
+      <div class="text-[11px] text-slate-400">Ground Floor, Student Plaza Commercial Complex</div>
+    </div>
+  </footer>
+
+  <!-- ==============================================================
+       JAVASCRIPT APPLICATION ENGINE
+       ============================================================== -->
+  <script>
+    const SERVICES_DATA = [
+      {
+        id: 'srv-doc-thesis',
+        name: 'Documents & Thesis Hardbound',
+        category: 'documents',
+        categoryLabel: 'Documents & Thesis',
+        basePrice: 2.0,
+        unit: 'per page',
+        description: 'Crisp black & white or vibrant full-color laser printing on standard or premium paper. Options for official hardbound gold foil, soft bind, and spiral ring.',
+        realisticImage: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=800&q=80',
+        turnaround: 'rush',
+        turnaroundLabel: '⚡ 1-2 Hours Rush',
+        rating: 4.9,
+        reviewsCount: 342,
+        finishOptions: ['Corner Staple', 'Ring Bind (Coil)', 'Soft Bind (PVC)', 'Hardbound Gold Foil'],
+        paperOptions: ['70gsm Copier', '80gsm Book Paper', '100gsm Premium Smooth']
+      },
+      {
+        id: 'srv-photo-prints',
+        name: 'Lab-Grade Photo Prints',
+        category: 'photos',
+        categoryLabel: 'Photo Prints & Tiles',
+        basePrice: 15.0,
+        unit: 'per photo (4R)',
+        description: 'Ultra-vibrant, smudge-resistant archival photographic prints. True RGB calibration, rich skin tones, and dynamic contrasts on 230gsm glossy or pearl satin paper.',
+        realisticImage: 'https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=800&q=80',
+        turnaround: 'sameday',
+        turnaroundLabel: 'Same Day Pickup',
+        rating: 4.95,
+        reviewsCount: 218,
+        finishOptions: ['High-Gloss Finish', 'Luster Satin', 'Matte Fine Art'],
+        paperOptions: ['230gsm Resin-Coated', '260gsm Premium Metallic']
+      },
+      {
+        id: 'srv-photo-tiles',
+        name: 'Stick-On Canvas Photo Tiles',
+        category: 'photos',
+        categoryLabel: 'Photo Prints & Tiles',
+        basePrice: 95.0,
+        unit: 'per 8x8" tile',
+        description: 'Damage-free wall photo tiles that stick, reposition, and restick cleanly. Wrapped canvas edges or minimalist clean beveled border.',
+        realisticImage: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=800&q=80',
+        turnaround: 'nextday',
+        turnaroundLabel: 'Next Day (24 hrs)',
+        rating: 4.88,
+        reviewsCount: 164,
+        finishOptions: ['Matte Canvas Wrap', 'Floating Black Edge'],
+        paperOptions: ['Archival Poly-Cotton Canvas on Featherlite Core']
+      },
+      {
+        id: 'srv-posters',
+        name: 'High-Impact Poster Printing',
+        category: 'posters',
+        categoryLabel: 'Posters & Banners',
+        basePrice: 65.0,
+        unit: 'per A3 sheet',
+        description: 'Large-scale vibrant posters for school events, cinema releases, concerts, and scientific presentations. Fade-resistant pigment inks up to 300dpi.',
+        realisticImage: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?auto=format&fit=crop&w=800&q=80',
+        turnaround: 'rush',
+        turnaroundLabel: '⚡ Same-Day Rush',
+        rating: 4.85,
+        reviewsCount: 195,
+        finishOptions: ['UV Gloss Lamination', 'Matte Anti-Glare', 'Foamboard Mounting'],
+        paperOptions: ['200gsm Heavy Silk', '230gsm Photo Gloss']
+      },
+      {
+        id: 'srv-stickers',
+        name: 'Die-Cut Vinyl Stickers & Labels',
+        category: 'marketing',
+        categoryLabel: 'Marketing & Business',
+        basePrice: 45.0,
+        unit: 'per A4 sheet (15-30 pcs)',
+        description: 'Waterproof, scratch-resistant vinyl decals kiss-cut to your exact outline. Dishwasher-safe and UV-protected for laptops, bottles, and product packaging.',
+        realisticImage: 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?auto=format&fit=crop&w=800&q=80',
+        turnaround: 'rush',
+        turnaroundLabel: '⚡ 2-Hour Express',
+        rating: 4.92,
+        reviewsCount: 420,
+        finishOptions: ['Glossy Laminate', 'Matte Velvet', 'Holographic Rainbow'],
+        paperOptions: ['Waterproof White Vinyl', 'Kraft Paper', 'Chrome Foil']
+      },
+      {
+        id: 'srv-business-cards',
+        name: 'Luxury Business Cards',
+        category: 'marketing',
+        categoryLabel: 'Marketing & Business',
+        basePrice: 180.0,
+        unit: 'per box (100 pcs)',
+        description: 'Create memorable first impressions. Printed on heavyweight 350gsm cardstock with optional gold foil stamping, spot UV gloss, and soft-touch velvet finish.',
+        realisticImage: 'https://images.unsplash.com/photo-1596524430615-b46475ddff6e?auto=format&fit=crop&w=800&q=80',
+        turnaround: 'nextday',
+        turnaroundLabel: 'Next Day Pickup',
+        rating: 4.9,
+        reviewsCount: 310,
+        finishOptions: ['Soft-Touch Velvet', 'Gold / Rose Gold Foil', 'Spot Gloss UV'],
+        paperOptions: ['350gsm Silk Coated', '300gsm Textured Linen']
+      },
+      {
+        id: 'srv-invitations',
+        name: 'Custom Invitations & Stationery',
+        category: 'custom',
+        categoryLabel: 'Custom Gifts & Stationery',
+        basePrice: 35.0,
+        unit: 'per card + envelope set',
+        description: 'Bespoke invitation suites for weddings, birthdays, graduations, and corporate galas. Elegant textured cardstock with matching envelopes and wax seal options.',
+        realisticImage: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=800&q=80',
+        turnaround: 'sameday',
+        turnaroundLabel: 'Same Day Pickup',
+        rating: 4.96,
+        reviewsCount: 145,
+        finishOptions: ['Deckled Edge', 'Foil Letterpress', 'Wax Seal'],
+        paperOptions: ['300gsm Cotton Rag', 'Pearl Shimmer Card']
+      },
+      {
+        id: 'srv-blueprints',
+        name: 'Architectural Blueprints & CAD',
+        category: 'architectural',
+        categoryLabel: 'Architectural & CAD',
+        basePrice: 50.0,
+        unit: 'per 20x30" sheet',
+        description: 'Precision large-format plan plotting for engineers, architects, and building contractors. Crisp line weights and accurate scale reproduction.',
+        realisticImage: 'https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=800&q=80',
+        turnaround: 'rush',
+        turnaroundLabel: '⚡ 30-Minute Plotting',
+        rating: 4.87,
+        reviewsCount: 88,
+        finishOptions: ['Standard Fold (A4 package)', 'Rolled in Tube'],
+        paperOptions: ['80gsm Bond Copier', '110gsm Tracing Vellum']
+      },
+      {
+        id: 'srv-packaging',
+        name: 'Boutique Packaging & Custom Wrap',
+        category: 'custom',
+        categoryLabel: 'Custom Gifts & Stationery',
+        basePrice: 25.0,
+        unit: 'per sheet / box sleeve',
+        description: 'Custom printed wrapping paper, branded mailer box sleeves, bakery paper, and shopping bag stickers for boutique retail and ecommerce businesses.',
+        realisticImage: 'https://images.unsplash.com/photo-1530595467537-0b5996c41f2d?auto=format&fit=crop&w=800&q=80',
+        turnaround: 'nextday',
+        turnaroundLabel: 'Next Day (24 hrs)',
+        rating: 4.82,
+        reviewsCount: 112,
+        finishOptions: ['Food-Safe Wax Coat', 'Matte Kraft', 'Gloss Coated'],
+        paperOptions: ['50gsm Translucent Tissue', '70gsm Recycled Kraft']
+      },
+      {
+        id: 'srv-rollup-banners',
+        name: 'Retractable Pull-Up Banners',
+        category: 'posters',
+        categoryLabel: 'Posters & Banners',
+        basePrice: 850.0,
+        unit: 'per complete stand (2.5x6ft)',
+        description: 'Portable, lightweight roll-up banner stands with anodized aluminum casing and padded carry bag. Tear-proof, curl-free blockout vinyl graphic.',
+        realisticImage: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=800&q=80',
+        turnaround: 'nextday',
+        turnaroundLabel: 'Next Day Available',
+        rating: 4.91,
+        reviewsCount: 76,
+        finishOptions: ['Anti-Glare Matte', 'High-Gloss Vinyl'],
+        paperOptions: ['440gsm Greyback Blockout Pet Vinyl']
+      },
+      {
+        id: 'srv-apparel-merch',
+        name: 'Custom Merch & Canvas Bags',
+        category: 'custom',
+        categoryLabel: 'Custom Gifts & Stationery',
+        basePrice: 120.0,
+        unit: 'per tote bag',
+        description: 'Direct-to-Film (DTF) high-definition full-color transfer prints on heavy organic cotton tote bags and printed canvas. Rich wash-resistant colors.',
+        realisticImage: 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=800&q=80',
+        turnaround: 'sameday',
+        turnaroundLabel: 'Same Day Pickup',
+        rating: 4.89,
+        reviewsCount: 153,
+        finishOptions: ['Single-Sided Print', 'Double-Sided Print'],
+        paperOptions: ['12oz 100% Organic Cotton Canvas']
+      },
+      {
+        id: 'srv-brochures',
+        name: 'Saddle-Stitched Product Catalogs',
+        category: 'marketing',
+        categoryLabel: 'Marketing & Business',
+        basePrice: 40.0,
+        unit: 'per 8-page booklet',
+        description: 'Folded and stapled spine booklets, tri-fold brochures, and corporate portfolios. High-fidelity CMYK fidelity with vibrant photographic reproduction.',
+        realisticImage: 'https://images.unsplash.com/photo-1606761568499-6d2451b23c66?auto=format&fit=crop&w=800&q=80',
+        turnaround: 'nextday',
+        turnaroundLabel: 'Next Day Pickup',
+        rating: 4.86,
+        reviewsCount: 94,
+        finishOptions: ['Tri-fold', 'Bi-fold', '8-16 Page Saddle Stitch'],
+        paperOptions: ['150gsm Gloss Art Paper', '120gsm Matte Book Paper']
+      }
+    ];
+
+    const INITIAL_ORDERS_DATA = [
+      { id: 'ord-101', queueNumber: 'Q-101', trackingCode: 'QP-2026-101', customerName: 'Juan Dela Cruz', contactNumber: '0917-555-0192', serviceName: 'Documents & Thesis Hardbound', pageCount: 30, copiesCount: 2, paperSize: 'A4', binding: 'Spiral Ring', totalAmount: 115.0, amountPaid: 115.0, paymentStatus: 'PAID', orderStatus: 'READY', createdAt: '2026-10-26 08:15' },
+      { id: 'ord-102', queueNumber: 'Q-102', trackingCode: 'QP-2026-102', customerName: 'Beatriz Alonzo', contactNumber: '0928-555-4921', serviceName: 'Die-Cut Vinyl Stickers & Labels', pageCount: 4, copiesCount: 3, paperSize: 'A4', binding: 'Laminate', totalAmount: 260.0, amountPaid: 260.0, paymentStatus: 'PAID', orderStatus: 'PROCESSING', createdAt: '2026-10-26 08:30' },
+      { id: 'ord-103', queueNumber: 'Q-103', trackingCode: 'QP-2026-103', customerName: 'Mark Reyes', contactNumber: '0908-555-9988', serviceName: 'High-Impact Poster Printing', pageCount: 2, copiesCount: 2, paperSize: 'A3', binding: 'None', totalAmount: 160.0, amountPaid: 80.0, paymentStatus: 'PARTIAL', orderStatus: 'PENDING', createdAt: '2026-10-26 08:45' }
+    ];
+
+    const App = {
+      services: SERVICES_DATA,
+      orders: JSON.parse(localStorage.getItem('qp_standalone_orders') || JSON.stringify(INITIAL_ORDERS_DATA)),
+      currentPortal: 'customer',
+      selectedCategory: 'all',
+      searchQuery: '',
+      viewMode: 'grid',
+      staffTab: 'queue',
+      staffQueueFilter: 'ALL',
+      adminTab: 'analytics',
+      currentUser: null,
+      chimeEnabled: true,
+      payingOrderId: null,
+
+      init() {
+        this.renderCategoryPills();
+        this.renderServicesGrid();
+        this.populateServiceDropdowns();
+        this.recalculatePrice();
+        this.renderTVBoard();
+        this.renderStaffQueue();
+        this.renderAdminOverview();
+        this.updateTopBar();
+        this.initClock();
+        this.trackOrder('Q-101');
+        lucide.createIcons();
+      },
+
+      saveOrders() {
+        localStorage.setItem('qp_standalone_orders', JSON.stringify(this.orders));
+        this.updateTopBar();
+        this.renderTVBoard();
+        this.renderStaffQueue();
+        this.renderAdminOverview();
+      },
+
+      updateTopBar() {
+        const pending = this.orders.filter(o => o.orderStatus === 'PENDING' || o.orderStatus === 'PROCESSING').length;
+        const ready = this.orders.filter(o => o.orderStatus === 'READY').length;
+        document.getElementById('top-bar-queue-load').innerText = pending;
+        document.getElementById('top-bar-ready-load').innerText = ready;
+      },
+
+      switchPortal(portal) {
+        this.currentPortal = portal;
+        ['customer', 'tv', 'staff', 'admin'].forEach(p => {
+          document.getElementById(`portal-${p}`).classList.toggle('hidden', p !== portal);
+          const btn = document.querySelector(`[data-portal-btn="${p}"]`);
+          if (btn) {
+            btn.className = (p === portal) 
+              ? 'px-3 py-1.5 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all bg-[#F4631E] text-white shadow-sm ring-2 ring-[#F4631E]/20'
+              : 'px-3 py-1.5 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all text-slate-600 hover:bg-slate-100';
+          }
+        });
+        document.getElementById('customer-sub-nav').classList.toggle('hidden', portal !== 'customer');
+        if (portal === 'tv') this.renderTVBoard();
+        if (portal === 'staff') this.renderStaffQueue();
+        if (portal === 'admin') this.renderAdminOverview();
+        lucide.createIcons();
+      },
+
+      renderCategoryPills() {
+        const categories = [
+          { id: 'all', label: 'All Services', count: this.services.length },
+          { id: 'documents', label: 'Documents & Thesis', count: this.services.filter(s => s.category === 'documents').length },
+          { id: 'photos', label: 'Photo Prints & Tiles', count: this.services.filter(s => s.category === 'photos').length },
+          { id: 'posters', label: 'Posters & Banners', count: this.services.filter(s => s.category === 'posters').length },
+          { id: 'marketing', label: 'Marketing & Business', count: this.services.filter(s => s.category === 'marketing').length },
+          { id: 'custom', label: 'Custom Gifts & Stationery', count: this.services.filter(s => s.category === 'custom').length },
+          { id: 'architectural', label: 'Architectural & CAD', count: this.services.filter(s => s.category === 'architectural').length }
+        ];
+
+        const container = document.getElementById('category-pills-bar');
+        container.innerHTML = categories.map(cat => `
+          <button type="button" onclick="App.filterCategory('${cat.id}')" class="px-4 py-2.5 rounded-2xl text-xs font-bold whitespace-nowrap flex items-center gap-2 transition-all ${
+            this.selectedCategory === cat.id ? 'bg-[#F4631E] text-white shadow-md shadow-[#F4631E]/20 scale-[1.02]' : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+          }">
+            <span>${cat.label}</span>
+            <span class="text-[10px] px-1.5 py-0.2 rounded-full font-mono ${this.selectedCategory === cat.id ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-500'}">${cat.count}</span>
+          </button>
+        `).join('');
+      },
+
+      filterCategory(cat) {
+        this.selectedCategory = cat;
+        this.renderCategoryPills();
+        this.renderServicesGrid();
+      },
+
+      handleSearch(q) {
+        this.searchQuery = q.toLowerCase();
+        this.renderServicesGrid();
+      },
+
+      applyFilters() {
+        const text = document.getElementById('catalog-search-filter').value.toLowerCase();
+        this.searchQuery = text;
+        this.renderServicesGrid();
+      },
+
+      resetFilters() {
+        this.selectedCategory = 'all';
+        this.searchQuery = '';
+        document.getElementById('catalog-search-filter').value = '';
+        document.getElementById('filter-turnaround').value = 'all';
+        document.getElementById('filter-budget').value = 'all';
+        document.getElementById('filter-sort').value = 'popular';
+        this.renderCategoryPills();
+        this.renderServicesGrid();
+      },
+
+      setViewMode(mode) {
+        this.viewMode = mode;
+        document.getElementById('view-mode-grid').className = mode === 'grid' ? 'p-2 rounded-xl text-xs font-bold bg-[#242B33] text-white shadow-sm' : 'p-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200';
+        document.getElementById('view-mode-compact').className = mode === 'compact' ? 'p-2 rounded-xl text-xs font-bold bg-[#242B33] text-white shadow-sm' : 'p-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200';
+        this.renderServicesGrid();
+      },
+
+      renderServicesGrid() {
+        const turnaround = document.getElementById('filter-turnaround')?.value || 'all';
+        const budget = document.getElementById('filter-budget')?.value || 'all';
+        const sort = document.getElementById('filter-sort')?.value || 'popular';
+
+        let list = this.services.filter(s => {
+          if (this.selectedCategory !== 'all' && s.category !== this.selectedCategory) return false;
+          if (this.searchQuery) {
+            const matches = s.name.toLowerCase().includes(this.searchQuery) || s.description.toLowerCase().includes(this.searchQuery);
+            if (!matches) return false;
+          }
+          if (turnaround !== 'all') {
+            if (turnaround === 'rush' && s.turnaround !== 'rush') return false;
+            if (turnaround === 'sameday' && s.turnaround !== 'sameday' && s.turnaround !== 'rush') return false;
+            if (turnaround === 'nextday' && s.turnaround !== 'nextday') return false;
+          }
+          if (budget !== 'all') {
+            if (budget === 'under50' && s.basePrice >= 50) return false;
+            if (budget === '50to150' && (s.basePrice < 50 || s.basePrice > 150)) return false;
+            if (budget === 'over150' && s.basePrice <= 150) return false;
+          }
+          return true;
+        });
+
+        // Sorting
+        list.sort((a, b) => {
+          if (sort === 'popular') return b.reviewsCount - a.reviewsCount;
+          if (sort === 'rating') return b.rating - a.rating;
+          if (sort === 'price-asc') return a.basePrice - b.basePrice;
+          if (sort === 'price-desc') return b.basePrice - a.basePrice;
+          return 0;
+        });
+
+        const container = document.getElementById('services-display-area');
+        if (list.length === 0) {
+          container.innerHTML = `
+            <div class="p-12 bg-white rounded-3xl border border-slate-200 text-center space-y-2">
+              <i data-lucide="alert-circle" class="w-8 h-8 text-slate-400 mx-auto"></i>
+              <div class="font-bold text-slate-800">No services match your filters.</div>
+              <button onclick="App.resetFilters()" class="px-4 py-1.5 rounded-xl bg-[#F4631E] text-white font-bold text-xs">Clear Filters</button>
+            </div>
+          `;
+          lucide.createIcons();
+          return;
+        }
+
+        if (this.viewMode === 'grid') {
+          container.innerHTML = `
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              ${list.map(s => `
+                <div class="group bg-white rounded-2xl border border-slate-200/90 hover:border-[#309898] shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden">
+                  <div class="relative h-52 w-full overflow-hidden bg-slate-100">
+                    <img src="${s.realisticImage}" alt="${s.name}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy">
+                    <div class="absolute top-3 left-3 px-2.5 py-1 rounded-lg bg-black/75 backdrop-blur-md text-white text-[10px] font-bold">${s.turnaroundLabel}</div>
+                    <div class="absolute top-3 right-3 px-2 py-0.5 rounded-md bg-[#309898] text-white text-[10px] font-bold shadow-sm">${s.categoryLabel.split(' ')[0]}</div>
+                    <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-4">
+                      <button type="button" onclick="App.openQuickView('${s.id}')" class="px-3.5 py-2 rounded-xl bg-white text-slate-900 font-bold text-xs shadow-lg hover:bg-slate-100 flex items-center gap-1.5">
+                        <i data-lucide="eye" class="w-3.5 h-3.5 text-[#309898]"></i> Quick View
+                      </button>
+                    </div>
+                  </div>
+                  <div class="p-4 flex-1 flex flex-col justify-between space-y-3">
+                    <div>
+                      <div class="flex items-center gap-1.5 text-xs text-slate-500 mb-1">
+                        <span class="font-bold text-slate-800">★ ${s.rating}</span>
+                        <span>•</span>
+                        <span class="text-[11px]">(${s.reviewsCount} reviews)</span>
+                      </div>
+                      <h3 class="font-extrabold text-slate-900 text-sm leading-snug group-hover:text-[#F4631E] transition-colors">${s.name}</h3>
+                      <p class="text-slate-500 text-xs mt-1.5 line-clamp-2">${s.description}</p>
+                    </div>
+                    <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+                      <div>
+                        <span class="text-[10px] text-slate-400 block font-medium">Starting from</span>
+                        <span class="font-extrabold text-base font-mono text-[#F4631E]">₱${s.basePrice.toFixed(2)}</span>
+                        <span class="text-[10px] text-slate-400">${s.unit}</span>
+                      </div>
+                      <button type="button" onclick="App.selectServiceForOrder('${s.id}')" class="px-3 py-2 rounded-xl bg-[#F4631E] hover:bg-[#E64A19] text-white font-bold text-xs shadow-sm flex items-center gap-1">
+                        <span>Configure</span> <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          `;
+        } else {
+          container.innerHTML = `
+            <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+              <table class="w-full text-left border-collapse text-xs">
+                <thead><tr class="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase text-[11px]"><th class="py-3 px-4">Service</th><th class="py-3 px-4">Category</th><th class="py-3 px-4">Base Rate</th><th class="py-3 px-4">Turnaround</th><th class="py-3 px-4 text-right">Action</th></tr></thead>
+                <tbody class="divide-y divide-slate-100">
+                  ${list.map(s => `
+                    <tr class="hover:bg-slate-50">
+                      <td class="py-3 px-4 flex items-center gap-3">
+                        <img src="${s.realisticImage}" class="w-10 h-10 rounded-lg object-cover">
+                        <span class="font-bold text-slate-800">${s.name}</span>
+                      </td>
+                      <td class="py-3 px-4">${s.categoryLabel}</td>
+                      <td class="py-3 px-4 font-mono font-bold text-[#F4631E]">₱${s.basePrice.toFixed(2)}</td>
+                      <td class="py-3 px-4 font-semibold text-slate-600">${s.turnaroundLabel}</td>
+                      <td class="py-3 px-4 text-right"><button onclick="App.selectServiceForOrder('${s.id}')" class="px-3 py-1.5 rounded-lg bg-[#F4631E] text-white font-bold text-xs">Configure</button></td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          `;
+        }
+        lucide.createIcons();
+      },
+
+      openQuickView(id) {
+        const s = this.services.find(item => item.id === id);
+        if (!s) return;
+        document.getElementById('quick-view-content').innerHTML = `
+          <div class="rounded-2xl overflow-hidden bg-slate-100 h-64 border border-slate-200">
+            <img src="${s.realisticImage}" alt="${s.name}" class="w-full h-full object-cover">
+          </div>
+          <div class="space-y-4 text-xs">
+            <div>
+              <span class="text-[11px] font-bold uppercase tracking-wider text-[#309898]">${s.categoryLabel}</span>
+              <h3 class="text-xl font-black text-slate-900 mt-1">${s.name}</h3>
+              <div class="text-slate-500 mt-1 font-bold">★ ${s.rating} • ${s.reviewsCount} verified reviews</div>
+            </div>
+            <p class="text-slate-600 leading-relaxed">${s.description}</p>
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 flex justify-between items-center">
+              <div><span class="text-slate-400 block text-[10px]">Turnaround</span><b>${s.turnaroundLabel}</b></div>
+              <div><span class="text-slate-400 block text-[10px]">Starting Rate</span><b class="font-mono text-[#F4631E] text-sm">₱${s.basePrice.toFixed(2)}</b></div>
+            </div>
+            <button onclick="App.selectServiceForOrder('${s.id}'); document.getElementById('quick-view-modal').classList.add('hidden');" class="w-full py-3 rounded-xl bg-[#F4631E] hover:bg-[#E64A19] text-white font-bold text-xs shadow-md">Select & Order This Service</button>
+          </div>
+        `;
+        document.getElementById('quick-view-modal').classList.remove('hidden');
+      },
+
+      populateServiceDropdowns() {
+        const options = this.services.map(s => `<option value="${s.id}">${s.name} — ₱${s.basePrice.toFixed(2)} (${s.unit})</option>`).join('');
+        document.getElementById('order-service-select').innerHTML = options;
+        const posSelect = document.getElementById('pos-service');
+        if (posSelect) posSelect.innerHTML = options;
+      },
+
+      selectServiceForOrder(id) {
+        document.getElementById('order-service-select').value = id;
+        this.recalculatePrice();
+        document.getElementById('order-form-section').scrollIntoView({ behavior: 'smooth' });
+      },
+
+      recalculatePrice() {
+        const srvId = document.getElementById('order-service-select').value;
+        const srv = this.services.find(s => s.id === srvId) || this.services[0];
+        const pSize = document.getElementById('order-paper-size').value;
+        const pType = document.getElementById('order-paper-type').value;
+        const pSide = document.getElementById('order-print-side').value;
+        const pages = Math.max(1, parseInt(document.getElementById('order-page-count').value, 10) || 1);
+        const copies = Math.max(1, parseInt(document.getElementById('order-copies-count').value, 10) || 1);
+        const bind = document.getElementById('order-binding').value;
+
+        const sizeFee = pSize === 'a4' ? 0.5 : (pSize === 'long' ? 1.0 : (pSize === 'a3' ? 8.0 : 0));
+        const typeFee = pType === 'book80' ? 1.0 : (pType === 'glossyPhoto' ? 12.0 : (pType === 'matteCardstock' ? 10.0 : (pType === 'stickerVinyl' ? 15.0 : 0)));
+        const bindFee = bind === 'ring' ? 55.0 : (bind === 'soft' ? 75.0 : (bind === 'hard' ? 350.0 : (bind === 'laminate' ? 25.0 : 0)));
+        const sheets = pSide === 'double' ? Math.ceil(pages / 2) : pages;
+        const duplexDiscount = pSide === 'double' ? 0.25 * sheets : 0;
+
+        const printCost = (srv.basePrice * pages) + (sizeFee * sheets) + (typeFee * sheets) - duplexDiscount;
+        const totalPerCopy = Math.max(1, printCost + bindFee);
+        const total = totalPerCopy * copies;
+
+        document.getElementById('cost-breakdown-area').innerHTML = `
+          <div class="flex justify-between"><span>Base Rate (${srv.name}):</span><b class="font-mono">₱${srv.basePrice.toFixed(2)}</b></div>
+          <div class="flex justify-between"><span>Pages & Sheets:</span><span>${pages} pgs (${sheets} physical sheets)</span></div>
+          ${(sizeFee + typeFee) > 0 ? `<div class="flex justify-between"><span>Material Surcharges:</span><span class="font-mono text-slate-800">+₱${((sizeFee + typeFee) * sheets).toFixed(2)}</span></div>` : ''}
+          ${bindFee > 0 ? `<div class="flex justify-between"><span>Binding / Finishing:</span><span class="font-mono text-slate-800">+₱${bindFee.toFixed(2)}</span></div>` : ''}
+          <div class="flex justify-between"><span>Copies / Sets:</span><span class="font-mono">× ${copies}</span></div>
+        `;
+        document.getElementById('cost-total-amount').innerText = `₱${total.toFixed(2)}`;
+        return total;
+      },
+
+      handleOrderSubmit(e) {
+        e.preventDefault();
+        const name = document.getElementById('order-name').value;
+        const contact = document.getElementById('order-contact').value;
+        const srvId = document.getElementById('order-service-select').value;
+        const srv = this.services.find(s => s.id === srvId) || this.services[0];
+        const pages = parseInt(document.getElementById('order-page-count').value, 10);
+        const copies = parseInt(document.getElementById('order-copies-count').value, 10);
+        const pSize = document.getElementById('order-paper-size').value.toUpperCase();
+        const bind = document.getElementById('order-binding').value;
+        const total = this.recalculatePrice();
+
+        const nextNum = 100 + this.orders.length + 1;
+        const qNum = `Q-${nextNum}`;
+        const trackCode = `QP-2026-${nextNum}`;
+
+        const newOrder = {
+          id: `ord-${Date.now()}`,
+          queueNumber: qNum,
+          trackingCode: trackCode,
+          customerName: name,
+          contactNumber: contact,
+          serviceName: srv.name,
+          pageCount: pages,
+          copiesCount: copies,
+          paperSize: pSize,
+          binding: bind,
+          totalAmount: total,
+          amountPaid: 0,
+          paymentStatus: 'UNPAID',
+          orderStatus: 'PENDING',
+          createdAt: new Date().toISOString().substring(0, 16).replace('T', ' ')
+        };
+
+        this.orders.unshift(newOrder);
+        this.saveOrders();
+        this.trackOrder(qNum);
+        this.openPrintTicket(newOrder);
+        this.playChime('success');
+        e.target.reset();
+        document.getElementById('order-page-count').value = '10';
+        document.getElementById('order-copies-count').value = '1';
+        this.recalculatePrice();
+      },
+
+      trackOrder(code) {
+        const q = code.trim().toUpperCase();
+        const order = this.orders.find(o => o.queueNumber === q || o.trackingCode === q);
+        const area = document.getElementById('tracker-result-area');
+        if (!order) {
+          area.innerHTML = `<div class="p-4 bg-red-50 text-red-800 rounded-xl text-xs font-semibold">No order matching "${q}" was found. Check your ticket number.</div>`;
+          return;
+        }
+
+        const isReady = order.orderStatus === 'READY';
+        const isProc = order.orderStatus === 'PROCESSING';
+        const isComp = order.orderStatus === 'COMPLETED';
+
+        area.innerHTML = `
+          <div class="p-6 bg-slate-50 rounded-2xl border border-slate-200 space-y-6">
+            <div class="p-3.5 rounded-xl flex items-center justify-between text-xs font-bold ${
+              isReady ? 'bg-emerald-50 text-emerald-900 border border-emerald-200' :
+              isProc ? 'bg-blue-50 text-blue-900 border border-blue-200' :
+              isComp ? 'bg-slate-200 text-slate-800' : 'bg-amber-50 text-amber-900 border border-amber-200'
+            }">
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full ${isReady ? 'bg-emerald-500 animate-ping' : (isProc ? 'bg-blue-500 animate-pulse' : 'bg-amber-500')}"></span>
+                <span>STATUS: ${order.orderStatus} ${isReady ? '— Ready for pickup at Counter 1!' : (isProc ? '— Printing in progress.' : '— In queue')}</span>
+              </div>
+              <button onclick="App.openPrintTicketById('${order.id}')" class="px-3 py-1.5 rounded-lg bg-[#242B33] text-white font-bold text-xs"><i data-lucide="printer" class="w-3.5 h-3.5 inline"></i> Print Ticket</button>
+            </div>
+
+            <!-- Stepper -->
+            <div class="flex items-center justify-between px-6">
+              <div class="text-center"><div class="w-8 h-8 rounded-full bg-[#309898] text-white font-bold flex items-center justify-center mx-auto text-xs">1</div><span class="text-[11px] font-bold text-[#309898] block mt-1">Pending</span></div>
+              <div class="h-1 flex-1 mx-2 ${isProc || isReady || isComp ? 'bg-[#F4631E]' : 'bg-slate-200'}"></div>
+              <div class="text-center"><div class="w-8 h-8 rounded-full ${isProc || isReady || isComp ? 'bg-[#F4631E] text-white' : 'bg-slate-200 text-slate-500'} font-bold flex items-center justify-center mx-auto text-xs">2</div><span class="text-[11px] font-bold ${isProc || isReady || isComp ? 'text-[#F4631E]' : 'text-slate-400'} block mt-1">Processing</span></div>
+              <div class="h-1 flex-1 mx-2 ${isReady || isComp ? 'bg-emerald-600' : 'bg-slate-200'}"></div>
+              <div class="text-center"><div class="w-8 h-8 rounded-full ${isReady || isComp ? 'bg-emerald-600 text-white animate-pulse' : 'bg-slate-200 text-slate-500'} font-bold flex items-center justify-center mx-auto text-xs">3</div><span class="text-[11px] font-bold ${isReady || isComp ? 'text-emerald-700' : 'text-slate-400'} block mt-1">Ready</span></div>
+              <div class="h-1 flex-1 mx-2 ${isComp ? 'bg-slate-800' : 'bg-slate-200'}"></div>
+              <div class="text-center"><div class="w-8 h-8 rounded-full ${isComp ? 'bg-slate-800 text-white' : 'bg-slate-200 text-slate-500'} font-bold flex items-center justify-center mx-auto text-xs">4</div><span class="text-[11px] font-bold ${isComp ? 'text-slate-800' : 'text-slate-400'} block mt-1">Completed</span></div>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-white p-4 rounded-xl border border-slate-200 text-xs">
+              <div><span class="text-slate-400 block text-[10px]">QUEUE NUMBER</span><b class="text-2xl font-black font-mono text-[#F4631E]">${order.queueNumber}</b></div>
+              <div><span class="text-slate-400 block text-[10px]">CUSTOMER</span><b class="text-slate-800 block">${order.customerName}</b><span class="text-slate-500">${order.serviceName}</span></div>
+              <div><span class="text-slate-400 block text-[10px]">SPECS</span><span>${order.pageCount} pgs × ${order.copiesCount} copy</span></div>
+              <div><span class="text-slate-400 block text-[10px]">TOTAL / BALANCE</span><b class="font-mono text-base text-slate-900 block">₱${order.totalAmount.toFixed(2)}</b><span class="${order.paymentStatus === 'PAID' ? 'text-emerald-600 font-bold' : 'text-[#CB0404] font-bold'}">${order.paymentStatus} (Bal: ₱${(order.totalAmount - order.amountPaid).toFixed(2)})</span></div>
+            </div>
+          </div>
+        `;
+        lucide.createIcons();
+      },
+
+      handleTrackSubmit(e) {
+        e.preventDefault();
+        this.trackOrder(document.getElementById('tracker-input').value);
+      },
+
+      openPrintTicketById(id) {
+        const order = this.orders.find(o => o.id === id);
+        if (order) this.openPrintTicket(order);
+      },
+
+      openPrintTicket(order) {
+        document.getElementById('print-slip-queue').innerText = order.queueNumber;
+        document.getElementById('print-slip-details').innerHTML = `
+          <div class="flex justify-between"><span class="text-slate-400">Date:</span><span>${order.createdAt}</span></div>
+          <div class="flex justify-between"><span class="text-slate-400">Tracking Code:</span><b>${order.trackingCode}</b></div>
+          <div class="flex justify-between"><span class="text-slate-400">Customer:</span><b>${order.customerName}</b></div>
+          <div class="flex justify-between"><span class="text-slate-400">Service:</span><span>${order.serviceName}</span></div>
+          <div class="flex justify-between font-bold text-slate-900 pt-1 border-t border-slate-200"><span>Payable:</span><span class="text-[#F4631E]">₱${order.totalAmount.toFixed(2)} (${order.paymentStatus})</span></div>
+        `;
+        document.getElementById('print-ticket-modal').classList.remove('hidden');
+        lucide.createIcons();
+      },
+
+      // TV LOBBY CONTROLLER
+      renderTVBoard() {
+        const ready = this.orders.filter(o => o.orderStatus === 'READY');
+        const proc = this.orders.filter(o => o.orderStatus === 'PROCESSING');
+        const pend = this.orders.filter(o => o.orderStatus === 'PENDING');
+
+        document.getElementById('tv-ready-column').innerHTML = ready.length ? ready.map(o => `
+          <div class="p-4 rounded-2xl bg-emerald-950/40 border-2 border-emerald-500/60 shadow-lg flex items-center justify-between animate-pulse">
+            <div><span class="text-4xl sm:text-5xl font-black font-mono text-emerald-400">${o.queueNumber}</span><span class="text-xs text-slate-300 block font-medium mt-1">${o.customerName}</span></div>
+            <div class="text-right"><span class="px-2.5 py-1 rounded-lg bg-emerald-500 text-white font-extrabold text-xs block">COUNTER 1</span></div>
+          </div>
+        `).join('') : '<div class="p-8 text-center text-slate-500 text-xs">No orders waiting for pickup.</div>';
+
+        document.getElementById('tv-processing-column').innerHTML = proc.length ? proc.map(o => `
+          <div class="p-4 rounded-2xl bg-[#309898]/10 border border-[#309898]/40 shadow-sm flex items-center justify-between">
+            <div><span class="text-3xl font-black font-mono text-white">${o.queueNumber}</span><span class="text-xs text-slate-300 block font-medium mt-0.5">${o.customerName}</span></div>
+            <div class="text-right"><span class="text-xs font-mono text-[#FF9F00] font-bold block">${o.pageCount} pgs × ${o.copiesCount}</span></div>
+          </div>
+        `).join('') : '<div class="p-8 text-center text-slate-500 text-xs">Printers idle.</div>';
+
+        document.getElementById('tv-pending-column').innerHTML = pend.length ? pend.map(o => `
+          <div class="p-3 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between text-xs">
+            <span class="font-mono font-bold text-[#FF9F00] text-lg">${o.queueNumber}</span>
+            <span class="text-slate-400 truncate max-w-[110px]">${o.customerName}</span>
+          </div>
+        `).join('') : '<div class="p-8 text-center text-slate-500 text-xs">Queue is clear.</div>';
+
+        document.getElementById('tv-waiting-count').innerText = `${pend.length} waiting`;
+        document.getElementById('tv-footer-load').innerText = this.orders.length;
+      },
+
+      initClock() {
+        const update = () => {
+          const d = new Date();
+          const clock = document.getElementById('tv-clock');
+          const dateEl = document.getElementById('tv-date');
+          if (clock) clock.innerText = d.toLocaleTimeString();
+          if (dateEl) dateEl.innerText = d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+        };
+        update();
+        setInterval(update, 1000);
+      },
+
+      toggleChime() {
+        this.chimeEnabled = !this.chimeEnabled;
+        document.getElementById('tv-chime-toggle').innerHTML = `<i data-lucide="${this.chimeEnabled ? 'volume-2' : 'volume-x'}" class="w-4 h-4"></i><span>Chime: ${this.chimeEnabled ? 'ON' : 'OFF'}</span>`;
+        if (this.chimeEnabled) this.playChime('ready');
+        lucide.createIcons();
+      },
+
+      playChime(type) {
+        try {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (!AudioContextClass) return;
+          const ctx = new AudioContextClass();
+          const now = ctx.currentTime;
+          const osc1 = ctx.createOscillator();
+          const gain1 = ctx.createGain();
+          osc1.frequency.setValueAtTime(698.46, now);
+          gain1.gain.setValueAtTime(0.2, now);
+          gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+          osc1.connect(gain1); gain1.connect(ctx.destination);
+          osc1.start(now); osc1.stop(now + 0.6);
+
+          const osc2 = ctx.createOscillator();
+          const gain2 = ctx.createGain();
+          osc2.frequency.setValueAtTime(880.00, now + 0.25);
+          gain2.gain.setValueAtTime(0.22, now + 0.25);
+          gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
+          osc2.connect(gain2); gain2.connect(ctx.destination);
+          osc2.start(now + 0.25); osc2.stop(now + 0.9);
+        } catch(e) {}
+      },
+
+      // STAFF POS CONTROLLER
+      setStaffTab(tab) {
+        this.staffTab = tab;
+        ['queue', 'pos', 'cashier', 'release'].forEach(t => {
+          document.getElementById(`staff-tab-${t}`).classList.toggle('hidden', t !== tab);
+          const btn = document.querySelector(`[data-staff-nav="${t}"]`);
+          if (btn) {
+            btn.className = (t === tab)
+              ? 'px-3 py-2 text-xs font-bold rounded-xl bg-[#309898] text-white shadow-sm flex items-center gap-1'
+              : 'px-3 py-2 text-xs font-bold rounded-xl bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 flex items-center gap-1';
+          }
+        });
+        if (tab === 'cashier') this.renderStaffCashier();
+        if (tab === 'release') this.renderStaffRelease();
+        lucide.createIcons();
+      },
+
+      setStaffQueueFilter(f) {
+        this.staffQueueFilter = f;
+        ['ALL', 'PENDING', 'PROCESSING', 'READY'].forEach(item => {
+          const btn = document.querySelector(`[data-q-filter="${item}"]`);
+          if (btn) btn.className = (item === f) ? 'px-3 py-1.5 text-xs font-bold rounded-xl bg-[#309898] text-white' : 'px-3 py-1.5 text-xs font-bold rounded-xl bg-slate-100 text-slate-600';
+        });
+        this.renderStaffQueue();
+      },
+
+      renderStaffQueue() {
+        const qSearch = (document.getElementById('staff-search-queue')?.value || '').toLowerCase();
+        const list = this.orders.filter(o => {
+          if (this.staffQueueFilter !== 'ALL' && o.orderStatus !== this.staffQueueFilter) return false;
+          if (qSearch && !o.queueNumber.toLowerCase().includes(qSearch) && !o.customerName.toLowerCase().includes(qSearch)) return false;
+          return true;
+        });
+
+        document.getElementById('staff-queue-tbody').innerHTML = list.length ? list.map(o => `
+          <tr class="hover:bg-slate-50">
+            <td class="py-3.5 px-4 font-mono font-bold text-[#F4631E]">${o.queueNumber}</td>
+            <td class="py-3.5 px-4"><span class="font-bold text-slate-800 block">${o.customerName}</span><span class="text-slate-500 text-[11px]">${o.contactNumber}</span></td>
+            <td class="py-3.5 px-4"><span class="font-semibold block">${o.serviceName}</span><span class="text-[11px] text-slate-500">${o.pageCount} pgs • ${o.binding}</span></td>
+            <td class="py-3.5 px-4"><span class="px-2 py-0.5 rounded-full font-bold text-[10px] uppercase ${o.orderStatus === 'READY' ? 'bg-emerald-100 text-emerald-800' : (o.orderStatus === 'PROCESSING' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800')}">${o.orderStatus}</span></td>
+            <td class="py-3.5 px-4 font-mono font-bold">₱${o.totalAmount.toFixed(2)} <span class="block text-[10px] ${o.paymentStatus === 'PAID' ? 'text-emerald-600' : 'text-[#CB0404]'}">${o.paymentStatus}</span></td>
+            <td class="py-3.5 px-4 text-right space-x-1">
+              ${o.orderStatus === 'PENDING' ? `<button onclick="App.advanceOrderStatus('${o.id}', 'PROCESSING')" class="px-2.5 py-1 bg-blue-600 text-white rounded-lg font-bold text-xs">Start Print</button>` : ''}
+              ${o.orderStatus === 'PROCESSING' ? `<button onclick="App.advanceOrderStatus('${o.id}', 'READY')" class="px-2.5 py-1 bg-emerald-600 text-white rounded-lg font-bold text-xs">Mark Ready</button>` : ''}
+              ${o.orderStatus === 'READY' ? `<button onclick="App.handleReleaseOrder('${o.id}')" class="px-2.5 py-1 bg-[#242B33] text-white rounded-lg font-bold text-xs">Release</button>` : ''}
+              <button onclick="App.openPrintTicketById('${o.id}')" class="p-1 text-slate-500 hover:text-slate-800"><i data-lucide="printer" class="w-4 h-4 inline"></i></button>
+            </td>
+          </tr>
+        `).join('') : '<tr><td colspan="6" class="p-6 text-center text-slate-400">No orders found.</td></tr>';
+        lucide.createIcons();
+      },
+
+      advanceOrderStatus(id, status) {
+        const order = this.orders.find(o => o.id === id);
+        if (order) {
+          order.orderStatus = status;
+          this.saveOrders();
+          if (status === 'READY' && this.chimeEnabled) this.playChime('ready');
+        }
+      },
+
+      handleReleaseOrder(id) {
+        const order = this.orders.find(o => o.id === id);
+        if (!order) return;
+        if (order.paymentStatus !== 'PAID') {
+          alert(`Flowchart check: Order ${order.queueNumber} has an unpaid balance of ₱${(order.totalAmount - order.amountPaid).toFixed(2)}. Please collect payment first.`);
+          this.openCashierPayModal(id);
+          return;
+        }
+        order.orderStatus = 'COMPLETED';
+        this.saveOrders();
+        alert(`Order ${order.queueNumber} released successfully to ${order.customerName}!`);
+      },
+
+      handleStaffPOSSubmit(e) {
+        e.preventDefault();
+        const name = document.getElementById('pos-name').value;
+        const contact = document.getElementById('pos-contact').value;
+        const srvId = document.getElementById('pos-service').value;
+        const srv = this.services.find(s => s.id === srvId) || this.services[0];
+        const pages = parseInt(document.getElementById('pos-pages').value, 10);
+        const copies = parseInt(document.getElementById('pos-copies').value, 10);
+        const pSize = document.getElementById('pos-size').value.toUpperCase();
+        const bind = document.getElementById('pos-binding').value;
+        const deposit = parseFloat(document.getElementById('pos-deposit').value) || 0;
+        const method = document.getElementById('pos-paymethod').value;
+
+        const total = (srv.basePrice * pages) * copies;
+        const nextNum = 100 + this.orders.length + 1;
+        const qNum = `Q-${nextNum}`;
+
+        const newOrder = {
+          id: `ord-${Date.now()}`,
+          queueNumber: qNum,
+          trackingCode: `QP-2026-${nextNum}`,
+          customerName: name,
+          contactNumber: contact,
+          serviceName: srv.name,
+          pageCount: pages,
+          copiesCount: copies,
+          paperSize: pSize,
+          binding: bind,
+          totalAmount: total,
+          amountPaid: deposit,
+          paymentStatus: deposit >= total ? 'PAID' : (deposit > 0 ? 'PARTIAL' : 'UNPAID'),
+          orderStatus: 'PENDING',
+          createdAt: new Date().toISOString().substring(0, 16).replace('T', ' ')
+        };
+
+        this.orders.unshift(newOrder);
+        this.saveOrders();
+        this.openPrintTicket(newOrder);
+        this.setStaffTab('queue');
+        e.target.reset();
+      },
+
+      renderStaffCashier() {
+        const unpaid = this.orders.filter(o => o.paymentStatus !== 'PAID');
+        document.getElementById('staff-cashier-cards-grid').innerHTML = unpaid.length ? unpaid.map(o => `
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+            <div class="flex justify-between items-start">
+              <div><span class="text-2xl font-black font-mono text-[#F4631E] block">${o.queueNumber}</span><b class="text-sm block">${o.customerName}</b></div>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-red-100 text-[#CB0404]">${o.paymentStatus}</span>
+            </div>
+            <div class="p-3 bg-slate-50 rounded-xl text-xs space-y-1">
+              <div class="flex justify-between"><span>Total:</span><b>₱${o.totalAmount.toFixed(2)}</b></div>
+              <div class="flex justify-between text-[#CB0404]"><span>Balance:</span><b>₱${(o.totalAmount - o.amountPaid).toFixed(2)}</b></div>
+            </div>
+            <button onclick="App.openCashierPayModal('${o.id}')" class="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm">Collect Payment</button>
+          </div>
+        `).join('') : '<div class="col-span-3 p-8 text-center text-slate-400 text-xs">All active orders are settled.</div>';
+      },
+
+      openCashierPayModal(id) {
+        this.payingOrderId = id;
+        const o = this.orders.find(item => item.id === id);
+        if (!o) return;
+        const bal = (o.totalAmount - o.amountPaid).toFixed(2);
+        document.getElementById('cashier-pay-summary').innerHTML = `
+          <div class="flex justify-between"><span>Queue:</span><b>${o.queueNumber} (${o.customerName})</b></div>
+          <div class="flex justify-between"><span>Total:</span><b>₱${o.totalAmount.toFixed(2)}</b></div>
+          <div class="flex justify-between text-[#CB0404]"><span>Balance:</span><b>₱${bal}</b></div>
+        `;
+        document.getElementById('cashier-pay-amount').value = bal;
+        document.getElementById('cashier-pay-modal').classList.remove('hidden');
+      },
+
+      handleCashierPaymentSubmit(e) {
+        e.preventDefault();
+        const amt = parseFloat(document.getElementById('cashier-pay-amount').value) || 0;
+        const o = this.orders.find(item => item.id === this.payingOrderId);
+        if (o && amt > 0) {
+          o.amountPaid = Math.min(o.totalAmount, o.amountPaid + amt);
+          o.paymentStatus = o.amountPaid >= o.totalAmount ? 'PAID' : 'PARTIAL';
+          this.saveOrders();
+          document.getElementById('cashier-pay-modal').classList.add('hidden');
+          this.renderStaffCashier();
+          this.playChime('ding');
+          alert(`Payment of ₱${amt.toFixed(2)} recorded for ${o.queueNumber}.`);
+        }
+      },
+
+      renderStaffRelease() {
+        const ready = this.orders.filter(o => o.orderStatus === 'READY');
+        document.getElementById('staff-release-cards-grid').innerHTML = ready.length ? ready.map(o => `
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+            <div class="flex justify-between items-start">
+              <div><span class="text-2xl font-black font-mono text-emerald-600 block">${o.queueNumber}</span><b class="text-sm block">${o.customerName}</b></div>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">READY</span>
+            </div>
+            <div class="p-3 bg-slate-50 rounded-xl text-xs space-y-1">
+              <div class="flex justify-between"><span>Payment:</span><b class="${o.paymentStatus === 'PAID' ? 'text-emerald-600' : 'text-[#CB0404]'}">${o.paymentStatus} (Bal: ₱${(o.totalAmount - o.amountPaid).toFixed(2)})</b></div>
+            </div>
+            <button onclick="App.handleReleaseOrder('${o.id}')" class="w-full py-2 bg-[#242B33] text-white font-bold text-xs rounded-xl shadow-sm">Confirm Handover</button>
+          </div>
+        `).join('') : '<div class="col-span-3 p-8 text-center text-slate-400 text-xs">No orders waiting at the counter.</div>';
+      },
+
+      // ADMIN CONTROLLER
+      setAdminTab(t) {
+        this.adminTab = t;
+        ['analytics', 'services', 'pricing', 'orders'].forEach(tab => {
+          document.getElementById(`admin-tab-${tab}`).classList.toggle('hidden', tab !== t);
+          const btn = document.querySelector(`[data-admin-nav="${tab}"]`);
+          if (btn) btn.className = (tab === t) ? 'px-3 py-2 text-xs font-bold rounded-xl bg-[#CB0404] text-white shadow-sm flex items-center gap-1' : 'px-3 py-2 text-xs font-bold rounded-xl bg-white text-slate-600 hover:bg-slate-100 border border-slate-200 flex items-center gap-1';
+        });
+        if (t === 'services') this.renderAdminServices();
+        if (t === 'orders') this.renderAdminOrders();
+        lucide.createIcons();
+      },
+
+      renderAdminOverview() {
+        const rev = this.orders.reduce((acc, o) => acc + (o.amountPaid || 0), 0);
+        document.getElementById('admin-stat-revenue').innerText = `₱${rev.toFixed(2)}`;
+        document.getElementById('admin-stat-jobs').innerText = this.orders.length;
+        document.getElementById('admin-stat-queue').innerText = this.orders.filter(o => o.orderStatus !== 'COMPLETED').length;
+      },
+
+      renderAdminServices() {
+        document.getElementById('admin-services-grid').innerHTML = this.services.map(s => `
+          <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm flex flex-col">
+            <img src="${s.realisticImage}" class="h-32 w-full object-cover">
+            <div class="p-4 flex-1 flex flex-col justify-between space-y-2">
+              <div><span class="text-[10px] font-bold text-[#309898] uppercase">${s.categoryLabel}</span><h4 class="font-bold text-slate-900 text-sm">${s.name}</h4></div>
+              <div class="flex justify-between items-center pt-2 border-t border-slate-100"><b class="font-mono text-[#F4631E]">₱${s.basePrice.toFixed(2)}</b><span class="text-xs text-slate-400">${s.turnaroundLabel}</span></div>
+            </div>
+          </div>
+        `).join('');
+      },
+
+      renderAdminOrders() {
+        document.getElementById('admin-orders-tbody').innerHTML = this.orders.map(o => `
+          <tr class="hover:bg-slate-50">
+            <td class="py-2.5 px-3 font-mono font-bold text-[#F4631E]">${o.queueNumber}</td>
+            <td class="py-2.5 px-3 font-bold">${o.customerName}</td>
+            <td class="py-2.5 px-3 text-slate-600">${o.serviceName}</td>
+            <td class="py-2.5 px-3 font-bold uppercase text-[10px]">${o.orderStatus}</td>
+            <td class="py-2.5 px-3 font-mono">₱${o.totalAmount.toFixed(2)}</td>
+            <td class="py-2.5 px-3 font-mono text-emerald-600">₱${o.amountPaid.toFixed(2)}</td>
+          </tr>
+        `).join('');
+      },
+
+      exportCSV() {
+        const headers = ['Queue', 'Tracking', 'Customer', 'Service', 'Total', 'Paid', 'Status'];
+        const rows = this.orders.map(o => [o.queueNumber, o.trackingCode, `"${o.customerName}"`, `"${o.serviceName}"`, o.totalAmount, o.amountPaid, o.orderStatus]);
+        const csv = [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+        const link = document.createElement('a');
+        link.href = 'data:text/csv;charset=utf-8,' + encodeURI(csv);
+        link.download = 'QuickPrint_Hub_Orders.csv';
+        link.click();
+      },
+
+      openLoginModal() {
+        document.getElementById('login-modal').classList.remove('hidden');
+      },
+
+      handleLogin(e) {
+        e.preventDefault();
+        const u = document.getElementById('login-username').value;
+        this.currentUser = { username: u, fullName: u === 'admin' ? 'Administrator' : 'Staff Cashier' };
+        document.getElementById('auth-status-bar').innerHTML = `
+          <div class="flex items-center gap-1.5 text-xs font-bold text-slate-700">
+            <span>${this.currentUser.fullName}</span>
+            <button onclick="location.reload()" class="p-1 hover:text-red-600">✕</button>
+          </div>
+        `;
+        document.getElementById('login-modal').classList.add('hidden');
+        this.switchPortal(u === 'admin' ? 'admin' : 'staff');
+      }
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+      App.init();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,1394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quick Print Hub - Queue & Print Management System</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              orange: '#F4631E',
+              teal: '#309898',
+              yellow: '#FFD13B',
+              dark: '#242B33',
+              red: '#CB0404'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- React 18 & ReactDOM & Babel for standalone execution -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap');
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    }
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      #printable-ticket, #printable-ticket * {
+        visibility: visible;
+      }
+      #printable-ticket {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 10px;
+        box-shadow: none;
+      }
+    }
+  </style>
+</head>
+<body class="bg-[#F8F9FA] text-[#222831] antialiased selection:bg-[#F4631E]/20 selection:text-[#F4631E]">
+
+  <div id="root"></div>
+
+  <!-- Main React Application Script -->
+  <script type="text/babel">
+    const { useState, useEffect, useMemo, useRef } = React;
+
+    // --- Web Audio Queue Chime (Realistic 2-tone airport / service chime) ---
+    const playQueueChime = () => {
+      try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const ctx = new AudioContext();
+        
+        const now = ctx.currentTime;
+        const osc1 = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(587.33, now); // D5
+        osc1.frequency.setValueAtTime(880.00, now + 0.18); // A5
+
+        osc2.type = 'triangle';
+        osc2.frequency.setValueAtTime(587.33, now);
+        osc2.frequency.setValueAtTime(880.00, now + 0.18);
+
+        gain.gain.setValueAtTime(0.001, now);
+        gain.gain.exponentialRampToValueAtTime(0.25, now + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
+
+        osc1.connect(gain);
+        osc2.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc1.start(now);
+        osc2.start(now);
+        osc1.stop(now + 0.95);
+        osc2.stop(now + 0.95);
+      } catch (err) {
+        console.warn('Audio chime notice:', err);
+      }
+    };
+
+    // --- Inline Vector Icons ---
+    const Icons = {
+      Printer: ({ className = "w-4 h-4" }) => (
+        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4H7v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+        </svg>
+      ),
+      Clock: ({ className = "w-4 h-4" }) => (
+        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+          <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+        </svg>
+      ),
+      CheckCircle: ({ className = "w-4 h-4" }) => (
+        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ),
+      Tv: ({ className = "w-4 h-4" }) => (
+        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+          <rect x="2" y="7" width="20" height="14" rx="2" /><path strokeLinecap="round" strokeLinejoin="round" d="M17 2l-5 5-5-5" />
+        </svg>
+      ),
+      Search: ({ className = "w-4 h-4" }) => (
+        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+          <circle cx="11" cy="11" r="8" /><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35" />
+        </svg>
+      ),
+      Shield: ({ className = "w-4 h-4" }) => (
+        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+        </svg>
+      ),
+      UserCheck: ({ className = "w-4 h-4" }) => (
+        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+          <circle cx="8.5" cy="7" r="4" /><polyline points="17 11 19 13 23 9" />
+        </svg>
+      ),
+      Sparkles: ({ className = "w-4 h-4" }) => (
+        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.5 5.5L21 8.5l-4 4 1 6-5.5-3-5.5 3 1-6-4-4 5.5-1L12 1z" />
+        </svg>
+      ),
+      Globe: ({ className = "w-4 h-4" }) => (
+        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+          <circle cx="12" cy="12" r="10" /><path strokeLinecap="round" strokeLinejoin="round" d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" />
+        </svg>
+      ),
+      Volume2: ({ className = "w-4 h-4" }) => (
+        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07" />
+        </svg>
+      ),
+      VolumeX: ({ className = "w-4 h-4" }) => (
+        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+          <line x1="23" y1="9" x2="17" y2="15" /><line x1="17" y1="9" x2="23" y2="15" />
+        </svg>
+      ),
+      FileText: ({ className = "w-4 h-4" }) => (
+        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" />
+        </svg>
+      ),
+      DollarSign: ({ className = "w-4 h-4" }) => (
+        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+          <line x1="12" y1="1" x2="12" y2="23" /><path strokeLinecap="round" strokeLinejoin="round" d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
+        </svg>
+      ),
+      ArrowRight: ({ className = "w-4 h-4" }) => (
+        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+          <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
+        </svg>
+      )
+    };
+
+    // --- Official Vector Logo Component ---
+    const Logo = ({ size = 'md', variant = 'light', onClick }) => {
+      const iconSizes = {
+        sm: 'w-8 h-8',
+        md: 'w-11 h-11',
+        lg: 'w-14 h-14'
+      };
+      const textSizes = {
+        sm: 'text-base',
+        md: 'text-xl',
+        lg: 'text-2xl'
+      };
+      const isDark = variant === 'dark';
+
+      return (
+        <div 
+          onClick={onClick}
+          className={`inline-flex items-center gap-2.5 select-none ${onClick ? 'cursor-pointer group' : ''}`}
+        >
+          {/* Official Emblem: Clean tilted page stack with 3 cyan/yellow/magenta drops + speed clock */}
+          <div className={`${iconSizes[size]} shrink-0 relative transition-transform duration-300 group-hover:scale-105`}>
+            <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-sm">
+              {/* Back Gold Shadow Sheet */}
+              <polygon points="26,20 86,34 72,94 12,80" fill="#FFD13B" stroke="#242B33" strokeWidth="2.5" strokeLinejoin="round"/>
+              {/* Front White Sheet */}
+              <polygon points="20,14 80,28 66,88 6,74" fill="#FFFFFF" stroke="#242B33" strokeWidth="2.5" strokeLinejoin="round"/>
+              
+              {/* 3 Primary Ink Drops */}
+              {/* Red / Magenta Top Drop */}
+              <path d="M42,26 C42,26 33,40 33,47 C33,52 37,56 42,56 C47,56 51,52 51,47 C51,40 42,26 42,26 Z" fill="#E62E2D" />
+              {/* Yellow Left Drop */}
+              <path d="M26,38 C26,38 18,50 18,56 C18,61 21.5,65 26,65 C30.5,65 34,61 34,56 C34,50 26,38 26,38 Z" fill="#FFC72C" />
+              {/* Deep Blue Right Drop */}
+              <path d="M51,40 C51,40 43,53 43,60 C43,65.5 47,69.5 52,69.5 C57,69.5 61,65.5 61,60 C61,53 51,40 51,40 Z" fill="#0A11A0" />
+
+              {/* Speed Lines & Clock */}
+              <line x1="62" y1="20" x2="70" y2="20" stroke="#242B33" strokeWidth="2" strokeLinecap="round"/>
+              <line x1="59" y1="25" x2="69" y2="25" stroke="#242B33" strokeWidth="2" strokeLinecap="round"/>
+              <circle cx="78" cy="24" r="11" fill="none" stroke="#242B33" strokeWidth="2.5"/>
+              <polyline points="78,17 78,24 83,27" fill="none" stroke="#242B33" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+          </div>
+
+          {/* Typography */}
+          <div className="flex flex-col">
+            <div className={`font-black tracking-tight flex items-center leading-none ${textSizes[size]}`}>
+              <span className={isDark ? 'text-white' : 'text-slate-900'}>Quick Print</span>
+              <span className="text-[#F4631E] ml-1.5 font-black">Hub</span>
+            </div>
+            <span className={`text-[9px] font-medium tracking-wide ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              For quick & easy life
+            </span>
+          </div>
+        </div>
+      );
+    };
+
+    // --- Mock Data & Initial State ---
+    const INITIAL_SERVICES = [
+      {
+        id: 'srv-doc',
+        code: 'DOC-01',
+        name: 'Documents & Thesis Hardbound',
+        category: 'documents',
+        basePrice: 2.0,
+        unit: 'per page',
+        description: 'Crisp black & white or vibrant full-color laser printing on standard or premium paper. Options for hardbound gold foil and spiral ring.',
+        turnaround: '⚡ 1-2 Hours Rush',
+        paperOptions: ['70gsm Copier', '80gsm Book Paper', '100gsm Premium Smooth'],
+        finishOptions: ['Corner Staple', 'Ring Bind (Coil)', 'Hardbound Gold Foil']
+      },
+      {
+        id: 'srv-photo',
+        code: 'PHT-01',
+        name: 'Lab-Grade Photo Prints',
+        category: 'photos',
+        basePrice: 15.0,
+        unit: 'per photo (4R)',
+        description: 'Ultra-vibrant, smudge-resistant archival photographic prints. True color calibration on 230gsm glossy or pearl satin paper.',
+        turnaround: 'Same Day Pickup',
+        paperOptions: ['230gsm Resin-Coated Glossy', '260gsm Satin Pearl'],
+        finishOptions: ['High-Gloss', 'Matte Fine Art']
+      },
+      {
+        id: 'srv-stickers',
+        code: 'STK-01',
+        name: 'Die-Cut Vinyl Stickers & Labels',
+        category: 'marketing',
+        basePrice: 45.0,
+        unit: 'per A4 sheet (15-30 pcs)',
+        description: 'Waterproof, scratch-resistant vinyl decals kiss-cut to your exact outline. Dishwasher-safe and UV-protected.',
+        turnaround: '⚡ 2-Hour Express',
+        paperOptions: ['Waterproof White Vinyl', 'Kraft Paper', 'Chrome Holographic'],
+        finishOptions: ['Glossy Laminate', 'Matte Velvet']
+      },
+      {
+        id: 'srv-posters',
+        code: 'POS-01',
+        name: 'High-Impact Poster Printing',
+        category: 'posters',
+        basePrice: 65.0,
+        unit: 'per A3 sheet',
+        description: 'Large-scale vibrant posters for school events, cinema releases, concerts, and scientific presentations up to 300dpi.',
+        turnaround: '⚡ Same-Day Rush',
+        paperOptions: ['200gsm Heavy Silk', 'Synthetic Waterproof PP'],
+        finishOptions: ['UV Gloss Lamination', 'Matte Anti-Glare', 'Foamboard Mount']
+      },
+      {
+        id: 'srv-cards',
+        code: 'CRD-01',
+        name: 'Luxury Business Cards',
+        category: 'marketing',
+        basePrice: 180.0,
+        unit: 'per box (100 pcs)',
+        description: 'Create memorable first impressions. Printed on heavyweight 350gsm cardstock with optional gold foil stamping and velvet finish.',
+        turnaround: 'Next Day Pickup',
+        paperOptions: ['350gsm Silk Coated', '300gsm Textured Linen'],
+        finishOptions: ['Soft-Touch Velvet', 'Gold Foil Stamped', 'Spot Gloss UV']
+      },
+      {
+        id: 'srv-blueprint',
+        code: 'CAD-01',
+        name: 'Architectural CAD Blueprints',
+        category: 'architectural',
+        basePrice: 85.0,
+        unit: 'per 20x30 sheet',
+        description: 'High-precision engineering and architectural schematics. Ultra-sharp line accuracy for permits and construction sites.',
+        turnaround: '⚡ 1-Hour Rush',
+        paperOptions: ['80gsm Blueprint Bond', 'Tracing Paper 90gsm'],
+        finishOptions: ['Roll Folded', 'Stapled Edge Binding']
+      }
+    ];
+
+    const INITIAL_ORDERS = [
+      {
+        id: 'ord-101',
+        queueNumber: 'Q-101',
+        trackingCode: 'QP-2026-101',
+        customerName: 'Joshua Miguel Ramos',
+        contactNumber: '0917-555-8921',
+        serviceName: 'Documents & Thesis Hardbound',
+        paperSize: 'a4',
+        paperType: 'book80',
+        printSide: 'double',
+        pageCount: 140,
+        copiesCount: 2,
+        binding: 'hard',
+        totalAmount: 980.0,
+        amountPaid: 980.0,
+        paymentStatus: 'PAID',
+        paymentMethod: 'GCash',
+        orderStatus: 'READY',
+        createdAt: '08:15 AM',
+        estimatedWaitMinutes: 0
+      },
+      {
+        id: 'ord-102',
+        queueNumber: 'Q-102',
+        trackingCode: 'QP-2026-102',
+        customerName: 'Alyssa Marie Cruz',
+        contactNumber: '0928-444-1234',
+        serviceName: 'Die-Cut Vinyl Stickers & Labels',
+        paperSize: 'a4',
+        paperType: 'stickerVinyl',
+        printSide: 'single',
+        pageCount: 10,
+        copiesCount: 1,
+        binding: 'none',
+        totalAmount: 450.0,
+        amountPaid: 450.0,
+        paymentStatus: 'PAID',
+        paymentMethod: 'Cash',
+        orderStatus: 'PROCESSING',
+        createdAt: '08:42 AM',
+        estimatedWaitMinutes: 8
+      },
+      {
+        id: 'ord-103',
+        queueNumber: 'Q-103',
+        trackingCode: 'QP-2026-103',
+        customerName: 'Engr. David Santos',
+        contactNumber: '0919-888-7711',
+        serviceName: 'Architectural CAD Blueprints',
+        paperSize: 'a3',
+        paperType: 'regular70',
+        printSide: 'single',
+        pageCount: 8,
+        copiesCount: 3,
+        binding: 'staple',
+        totalAmount: 680.0,
+        amountPaid: 300.0,
+        paymentStatus: 'PARTIAL',
+        paymentMethod: 'Cash',
+        orderStatus: 'PENDING',
+        createdAt: '09:05 AM',
+        estimatedWaitMinutes: 20
+      }
+    ];
+
+    // --- Main App Component ---
+    function App() {
+      const [activePortal, setActivePortal] = useState('customer'); // 'customer' | 'tv' | 'staff' | 'admin'
+      const [orders, setOrders] = useState(INITIAL_ORDERS);
+      const [services, setServices] = useState(INITIAL_SERVICES);
+      const [selectedCategory, setSelectedCategory] = useState('all');
+      const [searchQuery, setSearchQuery] = useState('');
+      const [configuringService, setConfiguringService] = useState(null);
+      const [ticketModalOrder, setTicketModalOrder] = useState(null);
+      const [trackingCodeInput, setTrackingCodeInput] = useState('');
+      const [trackedOrder, setTrackedOrder] = useState(null);
+      const [chimeEnabled, setChimeEnabled] = useState(true);
+
+      // Order Form State in Configurator Modal
+      const [customerName, setCustomerName] = useState('');
+      const [contactNumber, setContactNumber] = useState('');
+      const [paperSize, setPaperSize] = useState('a4');
+      const [paperType, setPaperType] = useState('book80');
+      const [printSide, setPrintSide] = useState('single');
+      const [pageCount, setPageCount] = useState(10);
+      const [copiesCount, setCopiesCount] = useState(1);
+      const [binding, setBinding] = useState('staple');
+      const [notes, setNotes] = useState('');
+
+      // Calculations
+      const calculatedPrice = useMemo(() => {
+        if (!configuringService) return 0;
+        let base = configuringService.basePrice;
+        if (paperSize === 'a3') base += 1.5;
+        if (paperType === 'glossyPhoto') base += 5.0;
+        if (paperType === 'stickerVinyl') base += 10.0;
+        if (printSide === 'double') base = base * 1.8; // duplex discount
+        
+        let bindingFee = 0;
+        if (binding === 'staple') bindingFee = 5.0;
+        if (binding === 'ring') bindingFee = 35.0;
+        if (binding === 'hard') bindingFee = 250.0;
+
+        return (base * pageCount + bindingFee) * copiesCount;
+      }, [configuringService, paperSize, paperType, printSide, pageCount, copiesCount, binding]);
+
+      // Place New Order Action
+      const handlePlaceOrder = (e) => {
+        e.preventDefault();
+        if (!customerName || !contactNumber) {
+          alert('Please enter your name and contact number');
+          return;
+        }
+
+        const nextNum = 100 + orders.length + 1;
+        const newOrder = {
+          id: 'ord-' + Date.now(),
+          queueNumber: `Q-${nextNum}`,
+          trackingCode: `QP-2026-${nextNum}`,
+          customerName,
+          contactNumber,
+          serviceName: configuringService.name,
+          paperSize,
+          paperType,
+          printSide,
+          pageCount,
+          copiesCount,
+          binding,
+          totalAmount: calculatedPrice,
+          amountPaid: 0,
+          paymentStatus: 'UNPAID',
+          orderStatus: 'PENDING',
+          createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          estimatedWaitMinutes: 15
+        };
+
+        setOrders(prev => [newOrder, ...prev]);
+        setConfiguringService(null);
+        setTicketModalOrder(newOrder);
+        setTrackedOrder(newOrder);
+
+        if (chimeEnabled) playQueueChime();
+      };
+
+      // Order status transition
+      const handleUpdateStatus = (orderId, newStatus) => {
+        setOrders(prev => prev.map(o => {
+          if (o.id === orderId) {
+            return {
+              ...o,
+              orderStatus: newStatus,
+              estimatedWaitMinutes: newStatus === 'READY' ? 0 : o.estimatedWaitMinutes
+            };
+          }
+          return o;
+        }));
+        if (newStatus === 'READY' && chimeEnabled) {
+          playQueueChime();
+        }
+      };
+
+      // Payment settlement
+      const handleRecordPayment = (orderId) => {
+        setOrders(prev => prev.map(o => {
+          if (o.id === orderId) {
+            return { ...o, paymentStatus: 'PAID', amountPaid: o.totalAmount, paymentMethod: 'Cash (Counter)' };
+          }
+          return o;
+        }));
+      };
+
+      // Track Order Search
+      const handleTrackSearch = (e) => {
+        e.preventDefault();
+        const code = trackingCodeInput.trim().toUpperCase();
+        if (!code) return;
+        const found = orders.find(o => o.trackingCode.toUpperCase() === code || o.queueNumber.toUpperCase() === code);
+        setTrackedOrder(found || 'not_found');
+      };
+
+      // Filtered Services Catalog
+      const filteredServices = useMemo(() => {
+        return services.filter(s => {
+          const matchCat = selectedCategory === 'all' || s.category === selectedCategory;
+          const matchQuery = s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                             s.description.toLowerCase().includes(searchQuery.toLowerCase());
+          return matchCat && matchQuery;
+        });
+      }, [services, selectedCategory, searchQuery]);
+
+      const readyOrders = orders.filter(o => o.orderStatus === 'READY');
+      const processingOrders = orders.filter(o => o.orderStatus === 'PROCESSING');
+      const pendingOrders = orders.filter(o => o.orderStatus === 'PENDING');
+
+      return (
+        <div className="min-h-screen flex flex-col bg-[#F8F9FA]">
+          
+          {/* Top Announcement Bar */}
+          <div className="bg-[#242B33] text-white text-[11px] font-medium py-1.5 px-4 border-b border-white/10">
+            <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-3">
+                <span className="flex items-center gap-1 text-[#FFD13B] font-bold">
+                  <Icons.Sparkles className="w-3.5 h-3.5 text-[#FFD13B]" /> Student Plaza Commercial Complex
+                </span>
+                <span className="text-white/40 hidden sm:inline">•</span>
+                <span className="text-slate-300 hidden md:inline">Open Mon–Sat 8:00 AM – 7:00 PM</span>
+              </div>
+              <div className="flex items-center gap-3 font-mono">
+                <span className="flex items-center gap-1.5 text-white/80">
+                  <span className="w-2 h-2 rounded-full bg-[#309898] animate-ping inline-block"></span>
+                  Active Queue: <b className="text-[#FFD13B]">{pendingOrders.length + processingOrders.length}</b>
+                </span>
+                <span>•</span>
+                <span className="text-emerald-400 font-bold">Ready for Pickup: {readyOrders.length}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Navigation Header */}
+          <header className="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-sm">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="min-h-16 flex flex-wrap items-center justify-between gap-4 py-2.5">
+                
+                {/* Logo */}
+                <Logo size="md" onClick={() => setActivePortal('customer')} />
+
+                {/* Global Search Bar */}
+                <div className="hidden md:flex flex-1 max-w-sm items-center gap-2 px-3.5 py-1.5 rounded-xl border border-slate-200 bg-slate-50 focus-within:border-[#309898] focus-within:bg-white focus-within:ring-2 focus-within:ring-[#309898]/20 transition-all">
+                  <Icons.Search className="w-4 h-4 text-slate-400" />
+                  <input 
+                    type="text" 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search print services & materials..." 
+                    className="w-full text-xs text-slate-800 bg-transparent outline-none placeholder:text-slate-400"
+                  />
+                  {searchQuery && (
+                    <button onClick={() => setSearchQuery('')} className="text-xs text-slate-400 hover:text-slate-600">✕</button>
+                  )}
+                </div>
+
+                {/* Portal Switchers */}
+                <nav className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => setActivePortal('customer')}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all ${
+                      activePortal === 'customer'
+                        ? 'bg-[#F4631E] text-white shadow-sm'
+                        : 'text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    <Icons.Globe className="w-3.5 h-3.5" />
+                    <span>Customer Shop</span>
+                  </button>
+
+                  <button
+                    onClick={() => setActivePortal('tv')}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all ${
+                      activePortal === 'tv'
+                        ? 'bg-[#242B33] text-white shadow-sm'
+                        : 'text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    <Icons.Tv className="w-3.5 h-3.5 text-[#309898]" />
+                    <span>Lobby TV</span>
+                  </button>
+
+                  <button
+                    onClick={() => setActivePortal('staff')}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all ${
+                      activePortal === 'staff'
+                        ? 'bg-[#309898] text-white shadow-sm'
+                        : 'text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    <Icons.UserCheck className="w-3.5 h-3.5" />
+                    <span>Staff POS</span>
+                  </button>
+
+                  <button
+                    onClick={() => setActivePortal('admin')}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all ${
+                      activePortal === 'admin'
+                        ? 'bg-[#CB0404] text-white shadow-sm'
+                        : 'text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    <Icons.Shield className="w-3.5 h-3.5" />
+                    <span>Admin</span>
+                  </button>
+                </nav>
+
+              </div>
+            </div>
+          </header>
+
+          {/* MAIN BODY PER PORTAL */}
+          <main className="flex-grow">
+            
+            {/* PORTAL 1: CUSTOMER SHOP */}
+            {activePortal === 'customer' && (
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
+                
+                {/* Hero Banner */}
+                <div className="rounded-3xl bg-gradient-to-r from-[#242B33] via-[#1c2229] to-[#0A11A0] text-white p-6 sm:p-10 shadow-lg relative overflow-hidden">
+                  <div className="max-w-2xl relative z-10 space-y-4">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#FFD13B]/20 text-[#FFD13B] border border-[#FFD13B]/30">
+                      ⚡ High-Speed On-Campus Printing & Bindery
+                    </span>
+                    <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight leading-tight">
+                      Express Printing for <span className="text-[#F4631E]">Quick & Easy Life</span>
+                    </h1>
+                    <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
+                      Instant thesis hardbinding, lab-grade photo prints, die-cut waterproof stickers, and CAD blueprints with automated queue tracking and live pickup SMS.
+                    </p>
+                    <div className="pt-2 flex flex-wrap items-center gap-3">
+                      <a 
+                        href="#services-section"
+                        className="px-5 py-2.5 bg-[#F4631E] hover:bg-[#e05312] text-white text-xs font-bold rounded-xl transition-all shadow-md inline-flex items-center gap-2"
+                      >
+                        <Icons.Printer className="w-4 h-4" />
+                        <span>Browse Services & Order</span>
+                      </a>
+                      <a 
+                        href="#tracker-section"
+                        className="px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white text-xs font-bold rounded-xl transition-all border border-white/20 inline-flex items-center gap-2"
+                      >
+                        <Icons.Clock className="w-4 h-4 text-[#FFD13B]" />
+                        <span>Track My Ticket</span>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tracker Quick Box */}
+                <div id="tracker-section" className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                        <Icons.Clock className="w-5 h-5 text-[#309898]" />
+                        <span>Live Queue & Ticket Tracker</span>
+                      </h2>
+                      <p className="text-xs text-slate-500">Enter your Ticket Number (e.g. Q-101) or Tracking Code (QP-2026-101)</p>
+                    </div>
+                    <form onSubmit={handleTrackSearch} className="flex items-center gap-2 max-w-md w-full">
+                      <input 
+                        type="text" 
+                        value={trackingCodeInput}
+                        onChange={(e) => setTrackingCodeInput(e.target.value)}
+                        placeholder="e.g. Q-101 or QP-2026-101"
+                        className="flex-1 px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-mono uppercase focus:ring-2 focus:ring-[#309898] outline-none"
+                      />
+                      <button 
+                        type="submit"
+                        className="px-4 py-2 bg-[#309898] hover:bg-[#277e7e] text-white text-xs font-bold rounded-xl transition-all"
+                      >
+                        Check Status
+                      </button>
+                    </form>
+                  </div>
+
+                  {/* Tracker Result Display */}
+                  {trackedOrder && trackedOrder !== 'not_found' && (
+                    <div className="mt-4 p-5 rounded-xl bg-slate-50 border border-slate-200 space-y-4 animate-fade-in">
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-3">
+                        <div className="flex items-center gap-3">
+                          <span className="text-xl font-mono font-black text-[#F4631E] bg-[#F4631E]/10 px-3 py-1 rounded-lg">
+                            {trackedOrder.queueNumber}
+                          </span>
+                          <div>
+                            <span className="text-xs font-bold text-slate-900 block">{trackedOrder.customerName}</span>
+                            <span className="text-[11px] text-slate-500 font-mono">{trackedOrder.trackingCode}</span>
+                          </div>
+                        </div>
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase font-mono ${
+                          trackedOrder.orderStatus === 'READY' ? 'bg-emerald-100 text-emerald-800' :
+                          trackedOrder.orderStatus === 'PROCESSING' ? 'bg-amber-100 text-amber-800 animate-pulse' :
+                          trackedOrder.orderStatus === 'COMPLETED' ? 'bg-slate-200 text-slate-700' :
+                          'bg-blue-100 text-blue-800'
+                        }`}>
+                          {trackedOrder.orderStatus}
+                        </span>
+                      </div>
+
+                      {/* Step Progress Bar */}
+                      <div className="grid grid-cols-4 gap-2 text-center text-[11px] font-bold">
+                        <div className={`p-2 rounded-lg ${['PENDING', 'PROCESSING', 'READY', 'COMPLETED'].includes(trackedOrder.orderStatus) ? 'bg-[#309898] text-white' : 'bg-slate-200 text-slate-400'}`}>
+                          1. Queued
+                        </div>
+                        <div className={`p-2 rounded-lg ${['PROCESSING', 'READY', 'COMPLETED'].includes(trackedOrder.orderStatus) ? 'bg-[#309898] text-white' : 'bg-slate-200 text-slate-400'}`}>
+                          2. Printing
+                        </div>
+                        <div className={`p-2 rounded-lg ${['READY', 'COMPLETED'].includes(trackedOrder.orderStatus) ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-400'}`}>
+                          3. Ready for Claim
+                        </div>
+                        <div className={`p-2 rounded-lg ${trackedOrder.orderStatus === 'COMPLETED' ? 'bg-slate-700 text-white' : 'bg-slate-200 text-slate-400'}`}>
+                          4. Handed Over
+                        </div>
+                      </div>
+
+                      <div className="text-xs text-slate-600 flex justify-between items-center pt-1">
+                        <span>Service: <b>{trackedOrder.serviceName}</b></span>
+                        <span>Total: <b className="text-slate-900 font-mono">₱{trackedOrder.totalAmount.toFixed(2)}</b> ({trackedOrder.paymentStatus})</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {trackedOrder === 'not_found' && (
+                    <div className="p-4 bg-red-50 text-red-700 text-xs rounded-xl border border-red-200">
+                      No matching order found for "{trackingCodeInput}". Please double-check your ticket number.
+                    </div>
+                  )}
+                </div>
+
+                {/* Catalog Section */}
+                <div id="services-section" className="space-y-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <h2 className="text-2xl font-black text-slate-900">Printing Services Catalog</h2>
+                      <p className="text-xs text-slate-500">Select any service to calculate custom pricing and generate your print queue ticket.</p>
+                    </div>
+
+                    {/* Category Filter Pills */}
+                    <div className="flex flex-wrap gap-1.5">
+                      {['all', 'documents', 'photos', 'posters', 'marketing', 'architectural'].map(cat => (
+                        <button
+                          key={cat}
+                          onClick={() => setSelectedCategory(cat)}
+                          className={`px-3 py-1 rounded-xl text-xs font-bold capitalize transition-all ${
+                            selectedCategory === cat
+                              ? 'bg-[#242B33] text-white shadow-sm'
+                              : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                          }`}
+                        >
+                          {cat}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Services Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredServices.map(service => (
+                      <div 
+                        key={service.id}
+                        className="bg-white rounded-2xl border border-slate-200 p-6 flex flex-col justify-between hover:shadow-lg transition-all group"
+                      >
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-mono font-bold uppercase text-[#309898] bg-[#309898]/10 px-2.5 py-0.5 rounded-md">
+                              {service.code}
+                            </span>
+                            <span className="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md">
+                              {service.turnaround}
+                            </span>
+                          </div>
+
+                          <h3 className="font-extrabold text-lg text-slate-900 group-hover:text-[#F4631E] transition-colors">
+                            {service.name}
+                          </h3>
+
+                          <p className="text-xs text-slate-600 leading-relaxed">
+                            {service.description}
+                          </p>
+
+                          <div className="pt-2 text-xs text-slate-500 space-y-1">
+                            <div>• <span className="font-medium text-slate-700">Papers:</span> {service.paperOptions.join(', ')}</div>
+                            <div>• <span className="font-medium text-slate-700">Finishing:</span> {service.finishOptions.join(', ')}</div>
+                          </div>
+                        </div>
+
+                        <div className="pt-6 mt-4 border-t border-slate-100 flex items-center justify-between">
+                          <div>
+                            <span className="text-[11px] text-slate-400 block">Starting at</span>
+                            <span className="text-xl font-black text-slate-900 font-mono">
+                              ₱{service.basePrice.toFixed(2)}
+                            </span>
+                            <span className="text-[10px] text-slate-500 ml-1 font-medium">{service.unit}</span>
+                          </div>
+
+                          <button
+                            onClick={() => {
+                              setConfiguringService(service);
+                              setCustomerName('');
+                              setContactNumber('');
+                              setPageCount(10);
+                              setCopiesCount(1);
+                            }}
+                            className="px-4 py-2 bg-[#F4631E] hover:bg-[#e05312] text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center gap-1.5"
+                          >
+                            <span>Configure</span>
+                            <Icons.ArrowRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+              </div>
+            )}
+
+            {/* PORTAL 2: TV LOBBY DISPLAY */}
+            {activePortal === 'tv' && (
+              <div className="bg-[#191e24] min-h-[calc(100vh-100px)] text-white p-6 sm:p-10 space-y-8">
+                
+                {/* TV Header Bar */}
+                <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-6">
+                  <div className="flex items-center gap-4">
+                    <Logo size="lg" variant="dark" />
+                    <div>
+                      <h1 className="text-xl font-black text-white uppercase tracking-wider">Queue Status Board</h1>
+                      <p className="text-xs text-slate-400">Please watch your ticket number and proceed to counter when called</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <button
+                      onClick={() => {
+                        playQueueChime();
+                        setChimeEnabled(!chimeEnabled);
+                      }}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2 border transition-all ${
+                        chimeEnabled ? 'bg-[#309898]/20 border-[#309898] text-[#309898]' : 'bg-slate-800 border-slate-700 text-slate-400'
+                      }`}
+                    >
+                      {chimeEnabled ? <Icons.Volume2 className="w-4 h-4" /> : <Icons.VolumeX className="w-4 h-4" />}
+                      <span>{chimeEnabled ? 'Chime Active' : 'Chime Muted'}</span>
+                    </button>
+
+                    <div className="text-right font-mono">
+                      <div className="text-lg font-bold text-[#FFD13B]">
+                        {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                      </div>
+                      <div className="text-[11px] text-slate-400">Student Plaza Counter 1-4</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3 Columns Queue Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  
+                  {/* READY FOR PICKUP COLUMN (NOW SERVING) */}
+                  <div className="bg-[#1E252E] rounded-3xl p-6 border-2 border-emerald-500/50 shadow-xl space-y-4">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                      <h2 className="text-base font-black text-emerald-400 uppercase tracking-wider flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-full bg-emerald-500 animate-ping inline-block"></span>
+                        Ready for Pickup ({readyOrders.length})
+                      </h2>
+                      <span className="text-xs font-mono text-emerald-400/80">Claim Counter</span>
+                    </div>
+
+                    <div className="space-y-3">
+                      {readyOrders.length === 0 ? (
+                        <div className="text-center py-12 text-slate-500 text-xs">No orders waiting for pickup</div>
+                      ) : (
+                        readyOrders.map(order => (
+                          <div 
+                            key={order.id} 
+                            className="bg-emerald-950/40 border border-emerald-500/40 rounded-2xl p-4 flex items-center justify-between animate-pulse"
+                          >
+                            <div>
+                              <div className="text-3xl font-black font-mono text-emerald-400 tracking-tight">
+                                {order.queueNumber}
+                              </div>
+                              <div className="text-xs text-slate-300 font-medium">{order.customerName}</div>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-[10px] font-mono text-slate-400 block">{order.serviceName}</span>
+                              <span className="text-xs font-bold text-emerald-300 bg-emerald-900/50 px-2 py-0.5 rounded">COUNTER 1</span>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  {/* NOW PRINTING COLUMN */}
+                  <div className="bg-[#1E252E] rounded-3xl p-6 border border-white/10 shadow-xl space-y-4">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                      <h2 className="text-base font-black text-amber-400 uppercase tracking-wider flex items-center gap-2">
+                        <Icons.Printer className="w-4 h-4 text-amber-400" />
+                        Now Printing ({processingOrders.length})
+                      </h2>
+                      <span className="text-xs font-mono text-amber-400/80">In Production</span>
+                    </div>
+
+                    <div className="space-y-3">
+                      {processingOrders.length === 0 ? (
+                        <div className="text-center py-12 text-slate-500 text-xs">No print jobs currently on press</div>
+                      ) : (
+                        processingOrders.map(order => (
+                          <div 
+                            key={order.id} 
+                            className="bg-amber-950/20 border border-amber-500/30 rounded-2xl p-4 flex items-center justify-between"
+                          >
+                            <div>
+                              <div className="text-2xl font-black font-mono text-amber-400">
+                                {order.queueNumber}
+                              </div>
+                              <div className="text-xs text-slate-300">{order.customerName}</div>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-xs font-mono font-bold text-amber-400 block">~{order.estimatedWaitMinutes} mins</span>
+                              <span className="text-[10px] text-slate-400">{order.serviceName}</span>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  {/* WAITING QUEUE COLUMN */}
+                  <div className="bg-[#1E252E] rounded-3xl p-6 border border-white/10 shadow-xl space-y-4">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                      <h2 className="text-base font-black text-[#309898] uppercase tracking-wider flex items-center gap-2">
+                        <Icons.Clock className="w-4 h-4 text-[#309898]" />
+                        Waiting in Queue ({pendingOrders.length})
+                      </h2>
+                      <span className="text-xs font-mono text-slate-400">Scheduled</span>
+                    </div>
+
+                    <div className="space-y-2">
+                      {pendingOrders.length === 0 ? (
+                        <div className="text-center py-12 text-slate-500 text-xs">No pending queue tickets</div>
+                      ) : (
+                        pendingOrders.map(order => (
+                          <div 
+                            key={order.id} 
+                            className="bg-slate-800/40 border border-slate-700 rounded-xl p-3 flex items-center justify-between"
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className="text-lg font-mono font-bold text-slate-200">{order.queueNumber}</span>
+                              <span className="text-xs text-slate-400 truncate max-w-[120px]">{order.customerName}</span>
+                            </div>
+                            <span className="text-[11px] text-slate-500 font-mono">Est: ~{order.estimatedWaitMinutes}m</span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            )}
+
+            {/* PORTAL 3: STAFF POS CONSOLE */}
+            {activePortal === 'staff' && (
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+                
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <h1 className="text-2xl font-black text-slate-900">Staff Counter & POS Operations</h1>
+                    <p className="text-xs text-slate-500">Manage queue tickets, record counter payments, and advance printing stages.</p>
+                  </div>
+                  <div className="flex items-center gap-2 font-mono text-xs">
+                    <span className="px-3 py-1.5 rounded-xl bg-slate-100 font-bold text-slate-700">Cashier: Hannah Benitez (Admin)</span>
+                    <button 
+                      onClick={() => setTicketModalOrder(orders[0])}
+                      className="px-3 py-1.5 rounded-xl bg-[#242B33] text-white font-bold hover:bg-slate-800"
+                    >
+                      Sample Receipt
+                    </button>
+                  </div>
+                </div>
+
+                {/* Orders Management Table */}
+                <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+                        <tr>
+                          <th className="py-3 px-4">Ticket</th>
+                          <th className="py-3 px-4">Customer</th>
+                          <th className="py-3 px-4">Job Specs</th>
+                          <th className="py-3 px-4">Total Amount</th>
+                          <th className="py-3 px-4">Payment</th>
+                          <th className="py-3 px-4">Status</th>
+                          <th className="py-3 px-4 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {orders.map(order => (
+                          <tr key={order.id} className="hover:bg-slate-50/80 transition-colors">
+                            <td className="py-3 px-4">
+                              <span className="font-mono font-black text-sm text-[#F4631E] block">{order.queueNumber}</span>
+                              <span className="font-mono text-[10px] text-slate-400">{order.trackingCode}</span>
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className="font-bold text-slate-900 block">{order.customerName}</span>
+                              <span className="text-[11px] text-slate-500">{order.contactNumber}</span>
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className="font-medium text-slate-800 block">{order.serviceName}</span>
+                              <span className="text-[10px] text-slate-500">
+                                {order.pageCount}p • {order.copiesCount}x • {order.paperSize.toUpperCase()} • {order.binding}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 font-mono font-bold text-slate-900">
+                              ₱{order.totalAmount.toFixed(2)}
+                            </td>
+                            <td className="py-3 px-4">
+                              {order.paymentStatus === 'PAID' ? (
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                                  PAID ({order.paymentMethod || 'Cash'})
+                                </span>
+                              ) : (
+                                <button
+                                  onClick={() => handleRecordPayment(order.id)}
+                                  className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-100 text-amber-900 hover:bg-amber-200 transition-all"
+                                >
+                                  Collect ₱{order.totalAmount.toFixed(2)}
+                                </button>
+                              )}
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase font-mono ${
+                                order.orderStatus === 'READY' ? 'bg-emerald-100 text-emerald-800' :
+                                order.orderStatus === 'PROCESSING' ? 'bg-amber-100 text-amber-800' :
+                                order.orderStatus === 'COMPLETED' ? 'bg-slate-200 text-slate-700' :
+                                'bg-blue-100 text-blue-800'
+                              }`}>
+                                {order.orderStatus}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 text-right space-x-1">
+                              {order.orderStatus === 'PENDING' && (
+                                <button
+                                  onClick={() => handleUpdateStatus(order.id, 'PROCESSING')}
+                                  className="px-2.5 py-1 bg-[#309898] hover:bg-[#277e7e] text-white rounded-lg text-[11px] font-bold"
+                                >
+                                  Start Print
+                                </button>
+                              )}
+                              {order.orderStatus === 'PROCESSING' && (
+                                <button
+                                  onClick={() => handleUpdateStatus(order.id, 'READY')}
+                                  className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-bold"
+                                >
+                                  Mark Ready
+                                </button>
+                              )}
+                              {order.orderStatus === 'READY' && (
+                                <button
+                                  onClick={() => handleUpdateStatus(order.id, 'COMPLETED')}
+                                  className="px-2.5 py-1 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-[11px] font-bold"
+                                >
+                                  Hand Over
+                                </button>
+                              )}
+                              <button
+                                onClick={() => setTicketModalOrder(order)}
+                                className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[11px] font-medium"
+                                title="Print Thermal Claim Ticket"
+                              >
+                                Ticket
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+              </div>
+            )}
+
+            {/* PORTAL 4: ADMIN HUB */}
+            {activePortal === 'admin' && (
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+                
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h1 className="text-2xl font-black text-slate-900">Admin Control Hub</h1>
+                    <p className="text-xs text-slate-500">Financial audits, staff rosters, and service catalog management.</p>
+                  </div>
+                  <span className="px-3 py-1 bg-[#CB0404]/10 text-[#CB0404] font-bold font-mono text-xs rounded-xl border border-[#CB0404]/20">
+                    Administrator Mode
+                  </span>
+                </div>
+
+                {/* KPI Metrics */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                    <span className="text-[11px] text-slate-500 font-bold uppercase block">Today's Revenue</span>
+                    <span className="text-2xl font-black text-slate-900 font-mono mt-1 block">₱2,110.00</span>
+                    <span className="text-[10px] text-emerald-600 font-bold">↑ 18% vs yesterday</span>
+                  </div>
+                  <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                    <span className="text-[11px] text-slate-500 font-bold uppercase block">Completed Orders</span>
+                    <span className="text-2xl font-black text-slate-900 font-mono mt-1 block">48</span>
+                    <span className="text-[10px] text-slate-400">Ground floor shop</span>
+                  </div>
+                  <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                    <span className="text-[11px] text-slate-500 font-bold uppercase block">Avg Turnaround</span>
+                    <span className="text-2xl font-black text-[#309898] font-mono mt-1 block">14 mins</span>
+                    <span className="text-[10px] text-emerald-600 font-bold">FastQueue target met</span>
+                  </div>
+                  <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                    <span className="text-[11px] text-slate-500 font-bold uppercase block">Active Staff</span>
+                    <span className="text-2xl font-black text-slate-900 font-mono mt-1 block">5 / 5</span>
+                    <span className="text-[10px] text-slate-400">All shifts covered</span>
+                  </div>
+                </div>
+
+                {/* Team Roster */}
+                <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
+                  <h3 className="font-extrabold text-sm text-slate-900">Authorized Team Members</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+                    {[
+                      { name: 'Hannah Benitez', role: 'ADMIN', user: 'benitez' },
+                      { name: 'John Bonda', role: 'STAFF', user: 'bonda' },
+                      { name: 'Maria Cometa', role: 'STAFF', user: 'cometa' },
+                      { name: 'Rafael Laserna', role: 'STAFF', user: 'laserna' },
+                      { name: 'Grace Porosa', role: 'STAFF', user: 'porosa' }
+                    ].map((m, idx) => (
+                      <div key={idx} className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+                        <div>
+                          <div className="font-bold text-slate-900">{m.name}</div>
+                          <div className="text-[10px] font-mono text-slate-500">@{m.user}</div>
+                        </div>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${m.role === 'ADMIN' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>
+                          {m.role}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+              </div>
+            )}
+
+          </main>
+
+          {/* GLOBAL FOOTER */}
+          {activePortal !== 'tv' && (
+            <footer className="bg-[#242B33] text-white/70 text-xs py-8 border-t border-white/10 mt-auto">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <Logo size="md" variant="dark" />
+                <p className="text-[11px] text-slate-400">
+                  © 2026 Quick Print Hub • Ground Floor, Student Plaza Commercial Complex
+                </p>
+              </div>
+            </footer>
+          )}
+
+          {/* CONFIGURATOR ORDER MODAL */}
+          {configuringService && (
+            <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+              <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl relative border border-slate-100 max-h-[90vh] overflow-y-auto">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+                  <div>
+                    <span className="text-[10px] font-mono font-bold uppercase text-[#309898] bg-[#309898]/10 px-2 py-0.5 rounded">
+                      {configuringService.code}
+                    </span>
+                    <h3 className="font-extrabold text-base text-slate-900 mt-1">{configuringService.name}</h3>
+                  </div>
+                  <button onClick={() => setConfiguringService(null)} className="text-slate-400 hover:text-slate-600 p-1">✕</button>
+                </div>
+
+                <form onSubmit={handlePlaceOrder} className="space-y-4 text-xs">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Your Full Name *</label>
+                      <input 
+                        type="text" 
+                        required 
+                        value={customerName} 
+                        onChange={e => setCustomerName(e.target.value)} 
+                        placeholder="e.g. Juan dela Cruz" 
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#309898] outline-none" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Contact / Mobile *</label>
+                      <input 
+                        type="text" 
+                        required 
+                        value={contactNumber} 
+                        onChange={e => setContactNumber(e.target.value)} 
+                        placeholder="0917-000-0000" 
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-[#309898] outline-none" 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Paper Size</label>
+                      <select 
+                        value={paperSize} 
+                        onChange={e => setPaperSize(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white"
+                      >
+                        <option value="short">Short / Letter (8.5 x 11")</option>
+                        <option value="a4">A4 (8.27 x 11.69")</option>
+                        <option value="long">Long / Legal (8.5 x 13")</option>
+                        <option value="a3">A3 (11.7 x 16.5") (+₱1.50)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Paper Material</label>
+                      <select 
+                        value={paperType} 
+                        onChange={e => setPaperType(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white"
+                      >
+                        <option value="regular70">70gsm Standard Copier</option>
+                        <option value="book80">80gsm Book Paper</option>
+                        <option value="glossyPhoto">Glossy Photo 230gsm</option>
+                        <option value="stickerVinyl">Waterproof Vinyl Decal</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Sides</label>
+                      <select 
+                        value={printSide} 
+                        onChange={e => setPrintSide(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white"
+                      >
+                        <option value="single">Single Sided</option>
+                        <option value="double">Back-to-Back (Duplex)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Pages</label>
+                      <input 
+                        type="number" 
+                        min="1" 
+                        value={pageCount} 
+                        onChange={e => setPageCount(Math.max(1, parseInt(e.target.value) || 1))} 
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">Copies</label>
+                      <input 
+                        type="number" 
+                        min="1" 
+                        value={copiesCount} 
+                        onChange={e => setCopiesCount(Math.max(1, parseInt(e.target.value) || 1))} 
+                        className="w-full px-3 py-2 rounded-xl border border-slate-300"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">Binding & Finish</label>
+                    <select 
+                      value={binding} 
+                      onChange={e => setBinding(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white"
+                    >
+                      <option value="none">No Binding (Loose Sheets)</option>
+                      <option value="staple">Corner Staple (+₱5)</option>
+                      <option value="ring">Spiral Ring Coil (+₱35)</option>
+                      <option value="hard">Hardbound Gold Foil (+₱250)</option>
+                    </select>
+                  </div>
+
+                  {/* Calculated Price Box */}
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] text-slate-400 block uppercase font-bold">Estimated Cost</span>
+                      <span className="text-2xl font-black text-[#F4631E] font-mono">
+                        ₱{calculatedPrice.toFixed(2)}
+                      </span>
+                    </div>
+                    <span className="text-[11px] font-bold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-lg">
+                      Turnaround: {configuringService.turnaround}
+                    </span>
+                  </div>
+
+                  <div className="pt-2 flex justify-end gap-2">
+                    <button 
+                      type="button" 
+                      onClick={() => setConfiguringService(null)}
+                      className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-semibold"
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      type="submit"
+                      className="px-6 py-2.5 rounded-xl bg-[#F4631E] hover:bg-[#e05312] text-white font-bold shadow-md transition-all flex items-center gap-1.5"
+                    >
+                      <Icons.Printer className="w-4 h-4" />
+                      <span>Generate Ticket & Place Order</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* THERMAL CLAIM TICKET MODAL */}
+          {ticketModalOrder && (
+            <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+              <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl relative border border-slate-100">
+                <button 
+                  onClick={() => setTicketModalOrder(null)} 
+                  className="absolute top-4 right-4 text-slate-400 hover:text-slate-600"
+                >
+                  ✕
+                </button>
+
+                {/* Printable Ticket Receipt Area */}
+                <div id="printable-ticket" className="bg-[#FAF9F5] p-5 rounded-xl border border-dashed border-slate-300 font-mono text-center space-y-3">
+                  <div className="text-[11px] text-slate-400 font-sans font-bold uppercase tracking-widest">Official Claim Slip</div>
+                  
+                  <div className="font-sans font-black text-xl text-slate-900">
+                    Quick Print <span className="text-[#F4631E]">Hub</span>
+                  </div>
+                  <div className="text-[10px] text-slate-500">Student Plaza Commercial Complex</div>
+
+                  <div className="py-3 border-y border-dashed border-slate-300 my-2">
+                    <div className="text-[11px] text-slate-400 uppercase">Queue Number</div>
+                    <div className="text-4xl font-black text-[#F4631E] tracking-tight">{ticketModalOrder.queueNumber}</div>
+                    <div className="text-[11px] text-slate-600 font-bold mt-1">{ticketModalOrder.trackingCode}</div>
+                  </div>
+
+                  <div className="text-left text-xs space-y-1 py-1">
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Customer:</span>
+                      <span className="font-bold text-slate-800">{ticketModalOrder.customerName}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Service:</span>
+                      <span className="font-bold text-slate-800">{ticketModalOrder.serviceName}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Total:</span>
+                      <span className="font-black text-slate-900">₱{ticketModalOrder.totalAmount.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Payment:</span>
+                      <span className="font-bold text-slate-700">{ticketModalOrder.paymentStatus}</span>
+                    </div>
+                  </div>
+
+                  {/* Simulated barcode */}
+                  <div className="pt-2 text-[9px] text-slate-400 tracking-widest">
+                    ||| | |||| || | ||||| |||| | |||
+                  </div>
+                  <div className="text-[9px] text-slate-400">Please present this slip at Counter 1</div>
+                </div>
+
+                <div className="mt-4 flex gap-2">
+                  <button
+                    onClick={() => window.print()}
+                    className="flex-1 py-2.5 rounded-xl bg-[#242B33] hover:bg-slate-800 text-white font-bold text-xs shadow transition-all flex items-center justify-center gap-1.5"
+                  >
+                    <Icons.Printer className="w-4 h-4" />
+                    <span>Print Slip</span>
+                  </button>
+                  <button
+                    onClick={() => setTicketModalOrder(null)}
+                    className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+        </div>
+      );
+    }
+
+    // Render into root element
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>

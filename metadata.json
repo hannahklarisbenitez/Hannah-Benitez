@@ -1,0 +1,8 @@
+{
+  "name": "QuickPrint Hub - Printing Shop Queue & Order Management",
+  "description": "Complete print shop queue and order system with realistic service catalog, intuitive multi-criteria filtering, live order tracking, lobby TV display, staff POS, and admin analytics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

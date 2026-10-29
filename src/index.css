@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  
+  /* User-Specified Palette */
+  --color-brand-teal: #309898;
+  --color-brand-amber: #FF9F00;
+  --color-brand-orange: #F4631E;
+  --color-brand-crimson: #CB0404;
+
+  /* Theme mappings */
+  --color-theme-teal: #309898;
+  --color-theme-amber: #FF9F00;
+  --color-theme-orange: #F4631E;
+  --color-theme-crimson: #CB0404;
+}
+
+:root {
+  --brand-teal: #309898;
+  --brand-amber: #FF9F00;
+  --brand-orange: #F4631E;
+  --brand-crimson: #CB0404;
+}
+
+/* Custom utilities */
+.ticket-paper {
+  position: relative;
+  background-color: #ffffff;
+  border-radius: 1rem;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.08);
+}
+
+.ticket-paper::before,
+.ticket-paper::after {
+  content: '';
+  position: absolute;
+  top: 55%;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: #F8F9FA;
+  transform: translateY(-50%);
+}
+
+.ticket-paper::before {
+  left: -10px;
+}
+
+.ticket-paper::after {
+  right: -10px;
+}
+
+.barcode-stripes {
+  height: 48px;
+  background: repeating-linear-gradient(
+    90deg,
+    #222831 0px,
+    #222831 2px,
+    transparent 2px,
+    transparent 4px,
+    #222831 4px,
+    #222831 7px,
+    transparent 7px,
+    transparent 9px,
+    #222831 9px,
+    #222831 10px,
+    transparent 10px,
+    transparent 13px,
+    #222831 13px,
+    #222831 16px,
+    transparent 16px,
+    transparent 17px,
+    #222831 17px,
+    #222831 21px,
+    transparent 21px,
+    transparent 24px
+  );
+  width: 100%;
+}
+
+/* Print thermal styling */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #printable-slip-area, #printable-slip-area * {
+    visibility: visible;
+  }
+  #printable-slip-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+}
